@@ -611,6 +611,100 @@
         </div>
       </div>
     </section>
+
+    <!-- 03 — LIVE MULTI-PLUGIN TELEMETRY BENCHMARK -->
+    <section class="section" id="live-benchmark" style="padding-top: 0;">
+      <div class="container">
+        <div class="section__head">
+          <span class="eyebrow">[ 03 — LIVE 7-ARM TELEMETRY BENCHMARK (3,100-LINE BUG HUNT) ]</span>
+          <h2 class="section__title">Real recorded hardware tokens: None vs. Caveman vs. Ponytail vs. Stingy</h2>
+        </div>
+
+        <div class="panel" style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.82rem; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--border);">
+                <th style="padding: 10px 8px;">Configuration (Live JSONL Proof)</th>
+                <th style="padding: 10px 8px; text-align: right;">Uncached In Tok</th>
+                <th style="padding: 10px 8px; text-align: right;">Cached In Tok</th>
+                <th style="padding: 10px 8px; text-align: right;">Output Tok (Report)</th>
+                <th style="padding: 10px 8px; text-align: right;">Real API Cost</th>
+                <th style="padding: 10px 8px; text-align: right;">Cost Delta</th>
+                <th style="padding: 10px 8px;">Output Correctness</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px 8px;"><a href="https://github.com/Kuro0No/stingy/blob/main/benchmarks/fixtures/live-ab-baseline.jsonl" target="_blank" rel="noopener">1. None (Default Baseline)</a></td>
+                <td style="padding: 10px 8px; text-align: right;">142,542</td>
+                <td style="padding: 10px 8px; text-align: right;">200,806</td>
+                <td style="padding: 10px 8px; text-align: right;">2,186 (1,416c)</td>
+                <td style="padding: 10px 8px; text-align: right;">$0.5207</td>
+                <td style="padding: 10px 8px; text-align: right;">0%</td>
+                <td style="padding: 10px 8px;">✅ 3/3 Bugs + 8/8 Tests</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px 8px;">2. Static <code>.claudeignore</code> / <code>tokendiet</code></td>
+                <td style="padding: 10px 8px; text-align: right;">142,542</td>
+                <td style="padding: 10px 8px; text-align: right;">200,806</td>
+                <td style="padding: 10px 8px; text-align: right;">2,186 (1,416c)</td>
+                <td style="padding: 10px 8px; text-align: right;">$0.5207</td>
+                <td style="padding: 10px 8px; text-align: right;">0%</td>
+                <td style="padding: 10px 8px;">✅ 3/3 Bugs + 8/8 Tests</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px 8px;"><a href="https://github.com/Kuro0No/stingy/blob/main/benchmarks/fixtures/live-ab-caveman-only.jsonl" target="_blank" rel="noopener">3. <code>caveman</code> only (Output Prose)</a></td>
+                <td style="padding: 10px 8px; text-align: right;">143,267</td>
+                <td style="padding: 10px 8px; text-align: right;">311,150</td>
+                <td style="padding: 10px 8px; text-align: right;">2,450 (1,874c)</td>
+                <td style="padding: 10px 8px; text-align: right;">$0.5599</td>
+                <td style="padding: 10px 8px; text-align: right;">+7.5%</td>
+                <td style="padding: 10px 8px;">✅ 3/3 Bugs + 8/8 Tests</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px 8px;"><a href="https://github.com/Kuro0No/stingy/blob/main/benchmarks/fixtures/live-ab-ponytail-only.jsonl" target="_blank" rel="noopener">4. <code>ponytail</code> only (Output Code YAGNI)</a></td>
+                <td style="padding: 10px 8px; text-align: right;">141,516</td>
+                <td style="padding: 10px 8px; text-align: right;">203,222</td>
+                <td style="padding: 10px 8px; text-align: right;">3,167 (2,010c)</td>
+                <td style="padding: 10px 8px; text-align: right;">$0.5330</td>
+                <td style="padding: 10px 8px; text-align: right;">+2.4%</td>
+                <td style="padding: 10px 8px;">✅ 3/3 Bugs + 8/8 Tests</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 10px 8px;"><a href="https://github.com/Kuro0No/stingy/blob/main/benchmarks/fixtures/live-ab-caveman-ponytail.jsonl" target="_blank" rel="noopener">5. <code>caveman + ponytail</code> (Output Stack)</a></td>
+                <td style="padding: 10px 8px; text-align: right;">124,392</td>
+                <td style="padding: 10px 8px; text-align: right;">291,817</td>
+                <td style="padding: 10px 8px; text-align: right;">1,732 (656c)</td>
+                <td style="padding: 10px 8px; text-align: right;">$0.4867</td>
+                <td style="padding: 10px 8px; text-align: right;"><strong>-6.5%</strong></td>
+                <td style="padding: 10px 8px;">✅ 3/3 Bugs + 8/8 Tests</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--green) 8%, var(--surface));">
+                <td style="padding: 10px 8px;"><a href="https://github.com/Kuro0No/stingy/blob/main/benchmarks/fixtures/live-ab-stingy.jsonl" target="_blank" rel="noopener"><strong>6. <code>stingy</code> only (<code>/stingy scrooge</code>)</strong></a></td>
+                <td style="padding: 10px 8px; text-align: right;"><strong>19,449</strong></td>
+                <td style="padding: 10px 8px; text-align: right;"><strong>35,159</strong></td>
+                <td style="padding: 10px 8px; text-align: right;">1,063 (947c)</td>
+                <td style="padding: 10px 8px; text-align: right;"><strong>$0.0848</strong></td>
+                <td style="padding: 10px 8px; text-align: right; color: var(--green);"><strong>-83.7%</strong></td>
+                <td style="padding: 10px 8px;">✅ 3/3 Bugs + 8/8 Tests</td>
+              </tr>
+              <tr style="background: color-mix(in srgb, var(--accent) 12%, var(--surface));">
+                <td style="padding: 10px 8px;"><a href="https://github.com/Kuro0No/stingy/blob/main/benchmarks/fixtures/live-ab-trinity-stack.jsonl" target="_blank" rel="noopener"><strong>7. <code>stingy + caveman + ponytail</code> (Trinity)</strong></a></td>
+                <td style="padding: 10px 8px; text-align: right;"><strong>19,279</strong></td>
+                <td style="padding: 10px 8px; text-align: right;"><strong>35,060</strong></td>
+                <td style="padding: 10px 8px; text-align: right;"><strong>781 (531c)</strong></td>
+                <td style="padding: 10px 8px; text-align: right;"><strong>$0.0801</strong></td>
+                <td style="padding: 10px 8px; text-align: right; color: var(--green);"><strong>-84.6%</strong></td>
+                <td style="padding: 10px 8px;">✅ 3/3 Bugs + 8/8 Tests</td>
+              </tr>
+            </tbody>
+          </table>
+          <p style="margin-top: 14px; font-size: 0.84rem; color: var(--muted);">
+            Reproduce locally with <code>npm run benchmark:plugins</code>. All 6 recorded JSONL transcripts with hardware LLM token telemetry (<code>input_tokens</code>, <code>cache_read_tokens</code>, <code>output_tokens</code>) are committed in <a href="https://github.com/Kuro0No/stingy/tree/main/benchmarks/fixtures" target="_blank" rel="noopener"><code>benchmarks/fixtures/</code></a>.
+          </p>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer>
