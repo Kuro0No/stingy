@@ -280,6 +280,168 @@ test('ChatGPT Audit Regression #4: stingy init creates both .claude/skills/sting
   }
 });
 
+test('Claude Round-3 Regression #1: tool_result with array of [{type:"text", text:"..."}] preserves real newlines and flags 500-line read', () => {
+  const blockArraySession = [
+    JSON.stringify({
+      type: 'assistant',
+      message: {
+        role: 'assistant',
+        content: [{ type: 'tool_use', id: 'tu_arr', name: 'Read', input: { file_path: 'src/block-array.ts' } }]
+      }
+    }),
+    JSON.stringify({
+      type: 'user',
+      message: {
+        role: 'user',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'tu_arr',
+            content: [
+              {
+                type: 'text',
+                text: Array.from({ length: 500 }, (_, i) => `export const item_${i} = ${i};`).join('\n')
+              }
+            ]
+          }
+        ]
+      }
+    })
+  ];
+
+  const stats = analyzeJsonlLines(blockArraySession);
+  assert.equal(stats.fullFileReads, 1, '500-line array-block tool_result must be classified as fullFileRead');
+  assert.equal(stats.surgicalReads, 0);
+  assert.ok(stats.wastedTokens > 2000, `Expected >2000 wasted tokens, got ${stats.wastedTokens}`);
+});
+
+test('Claude & Codex Round-3 Regression #2: offset without limit on a 3,000-line file is NOT treated as a 100-line surgical read', () => {
+  const offsetOnlySession = [
+    JSON.stringify({
+      type: 'assistant',
+      message: {
+        role: 'assistant',
+        content: [
+          { type: 'tool_use', id: 'tu_off', name: 'Read', input: { file_path: 'src/huge.ts', offset: 5 } }
+        ]
+      }
+    }),
+    JSON.stringify({
+      type: 'user',
+      message: {
+        role: 'user',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'tu_off',
+            content: Array.from({ length: 3000 }, (_, i) => `const row_${i} = "payload_${i}";`).join('\n')
+          }
+        ]
+      }
+    })
+  ];
+
+  const stats = analyzeJsonlLines(offsetOnlySession);
+  assert.equal(stats.fullFileReads, 1);
+  assert.equal(stats.surgicalReads, 0);
+  assert.ok(stats.wastedTokens > 15000);
+});
+
+test('Codex Round-3 Regression #3: Receipt line-item USD (fullReadUsd) matches total wastedUsd on dynamic 2,000-line read', () => {
+  const singleHugeReadSession = [
+    JSON.stringify({
+      type: 'assistant',
+      message: {
+        role: 'assistant',
+        content: [{ type: 'tool_use', id: 'r_usd', name: 'Read', input: { file_path: 'src/giant.ts' } }]
+      }
+    }),
+    JSON.stringify({
+      type: 'user',
+      message: {
+        role: 'user',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'r_usd',
+            content: Array.from({ length: 2000 }, (_, i) => `const line_${i} = ${i}; // padding text`).join('\n')
+          }
+        ]
+      }
+    })
+  ];
+
+  const stats = analyzeJsonlLines(singleHugeReadSession);
+  assert.equal(stats.fullReadUsd, stats.wastedUsd, 'Line-item fullReadUsd must equal total wastedUsd');
+  assert.ok(stats.fullReadUsd > 0.03, `Expected >$0.03 for 2,000-line read, got $${stats.fullReadUsd}`);
+});
+
+test('Codex Round-3 Regression #4: Two distinct failed commands (npm vs git) are not counted as a blind retry, whereas same command is', () => {
+  const distinctCmds = [
+    JSON.stringify({
+      type: 'PLANNER_RESPONSE',
+      status: 'ERROR',
+      tool_calls: [{ name: 'run_command', arguments: { CommandLine: 'npm test' } }]
+    }),
+    JSON.stringify({
+      type: 'PLANNER_RESPONSE',
+      status: 'ERROR',
+      tool_calls: [{ name: 'run_command', arguments: { CommandLine: 'git status' } }]
+    })
+  ];
+
+  const sameCmds = [
+    JSON.stringify({
+      type: 'PLANNER_RESPONSE',
+      status: 'ERROR',
+      tool_calls: [{ name: 'run_command', arguments: { CommandLine: 'npm test' } }]
+    }),
+    JSON.stringify({
+      type: 'PLANNER_RESPONSE',
+      status: 'ERROR',
+      tool_calls: [{ name: 'run_command', arguments: { CommandLine: 'npm test' } }]
+    })
+  ];
+
+  assert.equal(analyzeJsonlLines(distinctCmds).commandRetries, 0);
+  assert.equal(analyzeJsonlLines(sameCmds).commandRetries, 1);
+});
+
+test('Codex Round-3 Regression #5: stingy init from a directory path containing spaces copies full SKILL.md (not fallback)', () => {
+  const spaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'stingy space path '));
+  try {
+    const binDir = path.join(spaceRoot, 'bin');
+    const srcDir = path.join(spaceRoot, 'src');
+    const skillDir = path.join(spaceRoot, 'skills', 'stingy');
+    const workDir = path.join(spaceRoot, 'work project');
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.mkdirSync(workDir, { recursive: true });
+
+    const repoRoot = path.resolve(import.meta.dirname, '..');
+    fs.copyFileSync(path.join(repoRoot, 'bin', 'stingy.mjs'), path.join(binDir, 'stingy.mjs'));
+    fs.copyFileSync(path.join(repoRoot, 'src', 'core.mjs'), path.join(srcDir, 'core.mjs'));
+    fs.copyFileSync(path.join(repoRoot, 'skills', 'stingy', 'SKILL.md'), path.join(skillDir, 'SKILL.md'));
+
+    execFileSync(process.execPath, [path.join(binDir, 'stingy.mjs'), 'init'], {
+      cwd: workDir,
+      encoding: 'utf8'
+    });
+
+    const installedContent = fs.readFileSync(
+      path.join(workDir, '.claude', 'skills', 'stingy', 'SKILL.md'),
+      'utf8'
+    );
+    assert.ok(
+      installedContent.length > 1500,
+      `Expected full SKILL.md (>1500 chars) when path has spaces, got ${installedContent.length} chars`
+    );
+  } finally {
+    fs.rmSync(spaceRoot, { recursive: true, force: true });
+  }
+});
+
 test('Benchmark Model: 3-task trace model achieves >=80% uncached token reduction and >=75% prompt-cached USD reduction', () => {
   const report = runBenchmarks();
   assert.equal(report.tasks.length, 3);

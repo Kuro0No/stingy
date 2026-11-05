@@ -2,7 +2,7 @@
 
 > **"Why burn 50,000 input tokens reading whole files when 400 tokens do trick?"**
 >
-> **Stingy Mode** plugin, skill, and offline transcript auditor for **Claude Code, Cursor, and Antigravity**. Enforces a per-turn **10-Coin Budget** on file reads and tool calls — cutting **up to ~80% of tool-driven input token bloat** (`-81.2%` in our trace-driven benchmark model; typically **35%–80%** in live sessions depending on repo size and agent habits).
+> **Stingy Mode** plugin, skill, and offline transcript auditor for **Claude Code, Cursor, and Antigravity**. Enforces a per-turn **10-Coin Budget** on file reads and tool calls — cutting **up to ~80% of tool-driven input token bloat** in worst-case full-file traces (`-81.2%` in our synthetic trace model; **`-29.4%` measured avoidable waste** across 25 real local sessions where the agent already used partial reads).
 
 <p align="center">
   <img src="./assets/hero-demo.svg" width="880" alt="Stingy CLI Token Autopsy Receipt and Trace-Driven Benchmark Model" />
@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="#license"><img src="https://img.shields.io/badge/License-MIT-black.svg" alt="License: MIT" /></a>
-  <a href="./test/stingy.test.mjs"><img src="https://img.shields.io/badge/tests-14%20passing-brightgreen.svg" alt="Tests: 14 passing" /></a>
+  <a href="./test/stingy.test.mjs"><img src="https://img.shields.io/badge/tests-19%20passing-brightgreen.svg" alt="Tests: 19 passing" /></a>
   <a href="./benchmarks/run-benchmark.mjs"><img src="https://img.shields.io/badge/trace%20model--81.2%25%20tokens-22c55e.svg" alt="Trace Model: -81.2% input tokens" /></a>
   <a href="https://kuro0no.github.io/stingy/"><img src="https://img.shields.io/badge/demo-kuro0no.github.io%2Fstingy-orange.svg" alt="Live Demo" /></a>
 </p>
@@ -93,8 +93,8 @@ npm test
 * **What this models:** A deterministic, trace-driven comparison of **Unconstrained Baseline Tool Traces** (reading full files without range bounds, duplicate re-reads, un-piped test logs) vs. **Stingy Mode (`scrooge`) Tool Traces** (`grep` + 60–70 line surgical reads + `--silent` test runs) on identical generated TypeScript fixtures (`1,240` to `2,860` lines).
 * **Fixed System Overhead Included:** Every turn includes an uncompressible **8,200-token** base system/schema prefix.
 * **Honest Skill Overhead:** The Stingy trace is explicitly charged **+450 tokens** for loading `skills/stingy/SKILL.md`.
-* **Anthropic Prompt Caching Modeled:** Why is the Prompt-Cached USD reduction (**`-90.7%`**) even larger than raw token reduction (**`-81.2%`**)? Because under [Anthropic Prompt Caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching), the shared system prefix is read from cache at **`0.10x` (`$0.30/1M`)**, whereas dumping a new 1,200-line file into context incurs a **`1.25x` Cache Write fee (`$3.75/1M` — 12.5× more expensive per token than a cached read)**.
-* **Live Agent Caveat:** Because `SKILL.md` relies on LLM instruction following, real-world savings in live coding sessions typically range from **35% to 80%** depending on how large your repo files are and whether your agent was already using `grep`.
+* **Anthropic Prompt Caching Modeled:** Under [Anthropic Prompt Caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching), the shared system prefix is read from cache at **`0.10x` (`$0.30/1M`)**, whereas dumping a new 1,200-line file into context incurs a **`1.25x` Cache Write fee (`$3.75/1M` — 12.5× more expensive per token than a cached read)**, yielding **`-90.7%` modeled cache cost** in the synthetic trace comparison.
+* **Scope & Limitations:** `benchmarks/run-benchmark.mjs` is a **synthetic trace model** (it does not invoke live LLM APIs or claim live A/B task-quality equivalence). To measure real historical waste on your own machine without assumptions, run `npx github:Kuro0No/stingy roast` (on our 25 real local sessions totaling 18,519 steps, `roast` measured **`-29.4%` avoidable tool-token waste**: `97` unbounded full-file reads and `56` duplicate re-reads vs `859` surgical/small reads).
 
 | Task | Baseline Tokens | Stingy Tokens | Token Reduction | Prompt-Cached USD (Base → Stingy) | Coin Score |
 | :--- | ---: | ---: | ---: | ---: | ---: |

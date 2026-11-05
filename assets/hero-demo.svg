@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 500" width="920" height="500" role="img" aria-label="Stingy CLI Token Autopsy Receipt and Reproducible Benchmark">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 500" width="920" height="500" role="img" aria-label="Stingy CLI Token Autopsy Receipt and Trace-Driven Benchmark Model">
   <defs>
     <style>
       .bg { fill: #0D1117; }
       .frame { fill: #161B22; stroke: #30363D; stroke-width: 1.5; }
       .panel { fill: #0D1117; stroke: #21262D; stroke-width: 1; }
-      .mono { font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 12.5px; }
+      .mono { font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 12.2px; }
       .title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 12px; fill: #8B949E; font-weight: 600; }
       .c-dim { fill: #8B949E; }
       .c-white { fill: #E6EDF3; }
@@ -34,73 +34,74 @@
   <circle cx="64" cy="23" r="6" fill="#27C93F"/>
   <text x="460" y="27" text-anchor="middle" class="title">stingy — zsh — 110×28</text>
 
-  <!-- Left Pane: ASCII Token Autopsy Receipt -->
+  <!-- Left Pane: Real Local Log Autopsy Receipt -->
   <rect x="20" y="56" width="445" height="424" rx="8" class="panel"/>
   <g class="mono fade-1">
-    <text x="36" y="80" class="c-green">$</text>
-    <text x="50" y="80" class="c-white">npx github:Kuro0No/stingy roast</text>
+    <text x="34" y="78" class="c-green">$</text>
+    <text x="48" y="78" class="c-white">npx github:Kuro0No/stingy roast</text>
   </g>
 
   <g class="mono fade-2">
-    <text x="36" y="106" class="c-gold">===============================================</text>
-    <text x="36" y="124" class="c-gold">|          🪙 STINGY TOKEN AUTOPSY 🪙         |</text>
-    <text x="36" y="142" class="c-dim">|      "Why burn 50k tokens when 400 do?"     |</text>
-    <text x="36" y="158" class="c-dim">|---------------------------------------------|</text>
-    <text x="36" y="176" class="c-white">| LOGS SCANNED: 25 files (31,938 steps)       |</text>
-    <text x="36" y="192" class="c-dim">|---------------------------------------------|</text>
-    <text x="36" y="210" class="c-white">| Full-File Reads (No Range)   664x     $5.58 |</text>
-    <text x="36" y="228" class="c-white">| Duplicate File Re-Reads     1025x    $11.07 |</text>
-    <text x="36" y="246" class="c-green">| Surgical Line-Range Reads    154x     $0.00 |</text>
-    <text x="36" y="264" class="c-green">| Targeted Grep Searches       450x     $0.00 |</text>
-    <text x="36" y="280" class="c-dim">|---------------------------------------------|</text>
-    <text x="36" y="298" class="c-white">| 10-COIN BUDGET AVG:       2.16 / 10.0 Coins |</text>
-    <text x="36" y="316" class="c-white">| BANKRUPT TURNS (&gt;10c):    140 / 4,587 turns |</text>
-    <text x="36" y="332" class="c-dim">|---------------------------------------------|</text>
-    <text x="36" y="350" class="c-white">| EST. BASELINE COST (@$3/1M):         $23.32 |</text>
-    <text x="36" y="368" class="c-green">| WITH STINGY MODE (-71.5%):            $6.64 |</text>
-    <text x="36" y="386" class="c-red">| AVOIDABLE TOKEN WASTE:               $16.68 |</text>
-    <text x="36" y="402" class="c-dim">|---------------------------------------------|</text>
-    <text x="36" y="420" class="c-cyan">| DIAGNOSIS: THE GOLDFISH AGENT               |</text>
-    <text x="36" y="438" class="c-cyan">| (Re-reads same unedited files 1,025 times)  |</text>
-    <text x="36" y="456" class="c-gold">===============================================</text>
+    <text x="34" y="102" class="c-gold">===============================================</text>
+    <text x="34" y="119" class="c-gold">|          🪙 STINGY TOKEN AUTOPSY 🪙         |</text>
+    <text x="34" y="136" class="c-dim">|      "Why burn 50k tokens when 400 do?"     |</text>
+    <text x="34" y="152" class="c-dim">|---------------------------------------------|</text>
+    <text x="34" y="169" class="c-white">| LOGS SCANNED: 25 files (18,519 steps)       |</text>
+    <text x="34" y="185" class="c-dim">|---------------------------------------------|</text>
+    <text x="34" y="202" class="c-white">| Full-File Reads (No Range)    97x     $1.10 |</text>
+    <text x="34" y="219" class="c-white">| Duplicate File Re-Reads       56x     $0.44 |</text>
+    <text x="34" y="236" class="c-white">| Consecutive Cmd Retries        8x     $0.01 |</text>
+    <text x="34" y="253" class="c-white">| Frustration / Fix Prompts      4x     $0.11 |</text>
+    <text x="34" y="270" class="c-green">| Surgical Line-Range Reads    859x     $0.00 |</text>
+    <text x="34" y="287" class="c-green">| Targeted Grep Searches       210x     $0.00 |</text>
+    <text x="34" y="303" class="c-dim">|---------------------------------------------|</text>
+    <text x="34" y="320" class="c-white">| 10-COIN TURN BUDGET AVG:  9.96 / 10.0 Coins |</text>
+    <text x="34" y="337" class="c-white">| BANKRUPT TURNS (&gt;10c):      56 / 278 turns  |</text>
+    <text x="34" y="353" class="c-dim">|---------------------------------------------|</text>
+    <text x="34" y="370" class="c-white">| EST. BASELINE COST (@$3/1M):          $5.64 |</text>
+    <text x="34" y="387" class="c-green">| WITH STINGY MODE (-29.4%):            $3.98 |</text>
+    <text x="34" y="404" class="c-red">| AVOIDABLE TOKEN WASTE:                $1.66 |</text>
+    <text x="34" y="420" class="c-dim">|---------------------------------------------|</text>
+    <text x="34" y="438" class="c-cyan">| DIAGNOSIS: THE GOLDFISH AGENT               |</text>
+    <text x="34" y="456" class="c-gold">===============================================</text>
   </g>
 
-  <!-- Right Pane: Reproducible 3-Task Benchmark -->
+  <!-- Right Pane: Trace-Driven Benchmark Model -->
   <rect x="480" y="56" width="420" height="424" rx="8" class="panel"/>
   <g class="mono fade-3">
-    <text x="496" y="80" class="c-green">$</text>
-    <text x="510" y="80" class="c-white">npm run benchmark</text>
-    <text x="496" y="106" class="c-gold">TRACE-DRIVEN BENCHMARK MODEL (3 TASKS)</text>
-    <text x="496" y="124" class="c-dim">(Models 8.2k sys prompt + 450t skill + Prompt Cache)</text>
+    <text x="496" y="78" class="c-green">$</text>
+    <text x="510" y="78" class="c-white">npm run benchmark</text>
+    <text x="496" y="102" class="c-gold">SYNTHETIC TRACE MODEL (WORST-CASE VS SCROOGE)</text>
+    <text x="496" y="120" class="c-dim">(Models 8.2k sys prompt + 450t skill + Prompt Cache)</text>
 
     <!-- Task 1 -->
-    <text x="496" y="156" class="c-white">Task 1: Fix JWT Skew (1,240-line file)</text>
-    <rect x="496" y="165" width="320" height="12" rx="3" fill="#F85149" opacity="0.85"/>
-    <text x="824" y="175" class="c-dim">110.1k</text>
-    <rect x="496" y="182" width="58" height="12" rx="3" fill="#3FB950"/>
-    <text x="562" y="192" class="c-green">19.7k (-82.1% | 2.5/10 Coins)</text>
+    <text x="496" y="152" class="c-white">Task 1: Fix JWT Skew (1,240-line file)</text>
+    <rect x="496" y="161" width="320" height="12" rx="3" fill="#F85149" opacity="0.85"/>
+    <text x="824" y="171" class="c-dim">110.1k</text>
+    <rect x="496" y="178" width="58" height="12" rx="3" fill="#3FB950"/>
+    <text x="562" y="188" class="c-green">19.7k (-82.1% | 2.5/10 Coins)</text>
 
     <!-- Task 2 -->
-    <text x="496" y="224" class="c-white">Task 2: Cross-File Refactor (4 files, 2,860L)</text>
-    <rect x="496" y="233" width="320" height="12" rx="3" fill="#F85149" opacity="0.85"/>
-    <text x="824" y="243" class="c-dim">183.3k</text>
-    <rect x="496" y="250" width="61" height="12" rx="3" fill="#3FB950"/>
-    <text x="565" y="260" class="c-green">34.9k (-81.0% | 5.5/10 Coins)</text>
+    <text x="496" y="220" class="c-white">Task 2: Cross-File Refactor (4 files, 2,860L)</text>
+    <rect x="496" y="229" width="320" height="12" rx="3" fill="#F85149" opacity="0.85"/>
+    <text x="824" y="239" class="c-dim">183.3k</text>
+    <rect x="496" y="246" width="61" height="12" rx="3" fill="#3FB950"/>
+    <text x="565" y="256" class="c-green">34.9k (-81.0% | 5.5/10 Coins)</text>
 
     <!-- Task 3 -->
-    <text x="496" y="292" class="c-white">Task 3: Flaky Webhook Debug (1,620L + logs)</text>
-    <rect x="496" y="301" width="320" height="12" rx="3" fill="#F85149" opacity="0.85"/>
-    <text x="824" y="311" class="c-dim">111.3k</text>
-    <rect x="496" y="318" width="62" height="12" rx="3" fill="#3FB950"/>
-    <text x="566" y="328" class="c-green">21.4k (-80.8% | 3.5/10 Coins)</text>
+    <text x="496" y="288" class="c-white">Task 3: Flaky Webhook Debug (1,620L + logs)</text>
+    <rect x="496" y="297" width="320" height="12" rx="3" fill="#F85149" opacity="0.85"/>
+    <text x="824" y="307" class="c-dim">111.3k</text>
+    <rect x="496" y="314" width="62" height="12" rx="3" fill="#3FB950"/>
+    <text x="566" y="324" class="c-green">21.4k (-80.8% | 3.5/10 Coins)</text>
   </g>
 
   <!-- Aggregate Summary Box -->
   <g class="mono fade-4">
-    <rect x="496" y="352" width="388" height="110" rx="6" fill="#161B22" stroke="#3FB950" stroke-width="1.2"/>
-    <text x="512" y="376" class="c-white">MODEL AGGREGATE (UNCACHED + CACHED):</text>
-    <text x="512" y="398" class="c-dim">Baseline vs Stingy Tokens:  404.7k -&gt; 75.9k (-81.2%)</text>
-    <text x="512" y="418" class="c-green">Prompt-Cached Effective $:  $0.568 -&gt; $0.053 (-90.7%)</text>
-    <text x="512" y="444" class="c-gold">LIVE SESSION EXPECTATION:   ~35% to 80% input saved</text>
+    <rect x="496" y="348" width="388" height="114" rx="6" fill="#161B22" stroke="#3FB950" stroke-width="1.2"/>
+    <text x="512" y="372" class="c-white">SYNTHETIC TRACE MODEL BOUNDARIES:</text>
+    <text x="512" y="394" class="c-dim">Uncached Trace Tokens:     404.7k -&gt; 75.9k (-81.2%)</text>
+    <text x="512" y="414" class="c-green">Modeled Prompt-Cache $:    $0.568 -&gt; $0.053 (-90.7%)</text>
+    <text x="512" y="438" class="c-gold">Real 25-Session Audit:     -29.4% avoidable waste</text>
   </g>
 </svg>

@@ -3,17 +3,18 @@
  * Zero external dependencies.
  * - Per-session isolation (never leaks duplicate-read state across separate session files)
  * - User-turn grouping (accumulates all assistant tool calls within one human user turn)
- * - Dynamic tool_result payload measurement (1-line file read = 0 waste; 2,000-line read = proportional waste)
+ * - Dynamic tool_result payload measurement (supports both string and [{type:"text",text:"..."}] content blocks)
+ * - Exact per-category waste tracking so receipt line items always sum to total wasted USD
  */
 
 export const COIN_TABLE = Object.freeze({
   TURN_BUDGET: 10.0,
   GREP_SEARCH: 0.5,
-  SURGICAL_READ: 1.0,       // <= 120 lines (via range args OR small file <= 120 lines)
+  SURGICAL_READ: 1.0,       // <= 120 lines (via explicit range OR small file <= 120 lines)
   MEDIUM_READ: 2.0,         // 121..250 lines
   FULL_FILE_READ: 4.0,      // Unbounded read > 250 lines
   DUPLICATE_REREAD: 5.0,    // Re-reading the exact same file un-ranged without an edit in between
-  BLIND_RETRY: 4.0,         // Consecutive failed shell command without an edit in between
+  BLIND_RETRY: 4.0,         // Consecutive failed shell command retry without an edit in between
   FORBIDDEN_PATH_READ: 10.0 // Lockfiles, node_modules, build artifacts
 });
 
@@ -41,7 +42,9 @@ export function estimateTokensFromChars(charCount) {
 }
 
 /**
- * Determine line span from either StartLine/EndLine (Antigravity/Cursor) or offset/limit (Claude Code)
+ * Determine explicit line span from StartLine/EndLine (Antigravity/Cursor) or limit (Claude Code).
+ * Note: An `offset` without `limit` or `EndLine` does NOT bound the read length (reads up to EOF / 2,000 lines),
+ * so it returns `null` to defer to actual `tool_result` line count or full-file classification.
  */
 export function getReadLineSpan(args = {}) {
   const start = args.startLine ?? args.StartLine ?? args.start_line;
@@ -53,11 +56,6 @@ export function getReadLineSpan(args = {}) {
   const limit = args.limit ?? args.maxLines ?? args.max_lines;
   if (typeof limit === 'number' && limit > 0) {
     return limit;
-  }
-
-  const offset = args.offset;
-  if (typeof offset === 'number' && offset >= 0 && typeof limit !== 'number') {
-    return 100;
   }
 
   return null;
@@ -208,6 +206,32 @@ export function evaluateTurnBudget(actions = []) {
 }
 
 /**
+ * Normalize tool_result content (handles string OR array of { type: 'text', text: '...' } blocks
+ * without escaping real newlines via JSON.stringify).
+ */
+function extractToolResultText(rawContent) {
+  if (typeof rawContent === 'string') {
+    return rawContent;
+  }
+  if (Array.isArray(rawContent)) {
+    return rawContent
+      .map((item) => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item.text === 'string') return item.text;
+        if (item && typeof item.content === 'string') return item.content;
+        return '';
+      })
+      .filter(Boolean)
+      .join('\n');
+  }
+  if (rawContent && typeof rawContent === 'object') {
+    if (typeof rawContent.text === 'string') return rawContent.text;
+    if (typeof rawContent.output === 'string') return rawContent.output;
+  }
+  return '';
+}
+
+/**
  * Extract normalized tool calls from a parsed JSONL record.
  */
 function extractNormalizedToolCalls(record) {
@@ -253,15 +277,11 @@ function collectToolResultsMap(records) {
   const resultMap = new Map();
 
   for (const rec of records) {
-    // Claude Code / Anthropic format: content array with { type: 'tool_result', tool_use_id, content }
     const contentBlocks = rec.message?.content || (Array.isArray(rec.content) ? rec.content : null);
     if (Array.isArray(contentBlocks)) {
       for (const block of contentBlocks) {
         if (block && block.type === 'tool_result' && block.tool_use_id) {
-          const text =
-            typeof block.content === 'string'
-              ? block.content
-              : JSON.stringify(block.content || '');
+          const text = extractToolResultText(block.content);
           const lineCount = text ? text.split(/\r?\n/).length : 0;
           resultMap.set(block.tool_use_id, {
             chars: text.length,
@@ -272,13 +292,13 @@ function collectToolResultsMap(records) {
       }
     }
 
-    // Antigravity / generic format: tool_UseResult or tool_results array
-    if (rec.tool_use_id && typeof rec.content === 'string') {
-      const lineCount = rec.content.split(/\r?\n/).length;
+    if (rec.tool_use_id && rec.content !== undefined) {
+      const text = extractToolResultText(rec.content);
+      const lineCount = text ? text.split(/\r?\n/).length : 0;
       resultMap.set(rec.tool_use_id, {
-        chars: rec.content.length,
+        chars: text.length,
         lines: lineCount,
-        isError: rec.status === 'ERROR'
+        isError: rec.status === 'ERROR' || Boolean(rec.is_error)
       });
     }
   }
@@ -299,7 +319,6 @@ function isHumanPromptRecord(step) {
 
   const contentBlocks = step.message?.content || (Array.isArray(step.content) ? step.content : null);
   if (Array.isArray(contentBlocks) && contentBlocks.length > 0) {
-    // If every block is a tool_result, this is an automated tool response, NOT a new human prompt turn
     const allToolResults = contentBlocks.every((b) => b && b.type === 'tool_result');
     if (allToolResults) return false;
   }
@@ -309,9 +328,6 @@ function isHumanPromptRecord(step) {
 
 /**
  * Analyze one or more sessions honestly.
- * Accepts either:
- *   - An array of JSONL line strings (single session)
- *   - An array of arrays of JSONL line strings (multiple independent sessions, keeping state isolated per session)
  */
 export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
   const sessions =
@@ -330,7 +346,13 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
   let rageMessages = 0;
 
   let baselineToolTokens = 0;
-  let wastedTokens = 0;
+  let fullReadWastedTokens = 0;
+  let mediumReadWastedTokens = 0;
+  let dupReadWastedTokens = 0;
+  let forbiddenReadWastedTokens = 0;
+  let retryWastedTokens = 0;
+  let rageWastedTokens = 0;
+
   let observedCharTokens = 0;
   let telemetryInputTokens = 0;
   let telemetryCacheReadTokens = 0;
@@ -340,7 +362,6 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
   for (const sessionLines of sessions) {
     if (!Array.isArray(sessionLines)) continue;
 
-    // Parse valid JSON records for this isolated session
     const records = [];
     for (const rawLine of sessionLines) {
       if (!rawLine || !rawLine.trim()) continue;
@@ -354,9 +375,10 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
 
     const toolResultsMap = collectToolResultsMap(records);
 
-    // Session-scoped state (never leaks to other session files!)
+    // Session-scoped state
     const uneditedReadPaths = new Set();
     let lastCommandFailed = false;
+    let lastFailedCommandSig = null;
     let currentTurnActions = [];
 
     function flushCurrentTurn() {
@@ -369,7 +391,6 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
     for (const step of records) {
       totalSteps++;
 
-      // Collect actual API usage telemetry if logged
       const usage = step.usage || step.message?.usage;
       if (usage && typeof usage === 'object') {
         telemetryInputTokens +=
@@ -378,7 +399,6 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
       }
 
       if (isHumanPromptRecord(step)) {
-        // A new human prompt starts a new User Turn! Flush the previous turn's accumulated actions.
         flushCurrentTurn();
 
         const textContent =
@@ -402,7 +422,7 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
           rageMessages++;
           const rageTok = Math.max(400, estimateTokensFromChars(textContent.length) * 4);
           baselineToolTokens += rageTok;
-          wastedTokens += rageTok;
+          rageWastedTokens += rageTok;
         }
       }
 
@@ -415,11 +435,11 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
           args.Path || args.file_path || args.path || args.filePath || args.file || ''
         );
 
-        // Look up actual tool_result payload if present in the session log
+        const inlineText = inlineResult !== null ? extractToolResultText(inlineResult) : '';
         const observedResult =
           (id && toolResultsMap.get(id)) ||
-          (typeof inlineResult === 'string'
-            ? { chars: inlineResult.length, lines: inlineResult.split(/\r?\n/).length }
+          (inlineText
+            ? { chars: inlineText.length, lines: inlineText.split(/\r?\n/).length }
             : null);
 
         if (name === 'read' || name.includes('read_file') || name.includes('view_file')) {
@@ -428,13 +448,21 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
             currentTurnActions.push({ type: 'read', path: targetPath });
             const tok = observedResult ? estimateTokensFromChars(observedResult.chars) : 8000;
             baselineToolTokens += tok;
-            wastedTokens += tok;
+            forbiddenReadWastedTokens += tok;
             continue;
           }
 
           const span = getReadLineSpan(args);
+          // If explicit bounded range is supplied (e.g. offset+limit or StartLine+EndLine), use the smaller of span or actual returned lines
           const effectiveLines =
-            span !== null ? span : observedResult ? observedResult.lines : null;
+            span !== null
+              ? observedResult
+                ? Math.min(span, observedResult.lines)
+                : span
+              : observedResult
+                ? observedResult.lines
+                : null;
+
           const actualReadTokens = observedResult
             ? Math.max(25, estimateTokensFromChars(observedResult.chars))
             : null;
@@ -450,7 +478,7 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
             duplicateReads++;
             const dupTokens = actualReadTokens ?? 3600;
             baselineToolTokens += dupTokens;
-            wastedTokens += dupTokens;
+            dupReadWastedTokens += dupTokens;
             currentTurnActions.push({
               type: 'read',
               path: targetPath,
@@ -458,7 +486,6 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
               isDuplicateRead: true
             });
           } else if (effectiveLines !== null && effectiveLines <= 120) {
-            // Either explicit range <=120 lines OR actual file/result is small (<=120 lines): 0 waste!
             surgicalReads++;
             const surgTokens = actualReadTokens ?? Math.max(120, effectiveLines * 8);
             baselineToolTokens += surgTokens;
@@ -473,8 +500,9 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
             mediumReads++;
             const medTokens = actualReadTokens ?? effectiveLines * 8;
             const surgicalBaseline = 650;
+            const waste = Math.max(0, medTokens - surgicalBaseline);
             baselineToolTokens += medTokens;
-            wastedTokens += Math.max(0, medTokens - surgicalBaseline);
+            mediumReadWastedTokens += waste;
             currentTurnActions.push({
               type: 'read',
               path: targetPath,
@@ -486,8 +514,9 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
             fullFileReads++;
             const fullTokens = actualReadTokens ?? 3450;
             const surgicalEquivalent = 650;
+            const waste = Math.max(0, fullTokens - surgicalEquivalent);
             baselineToolTokens += fullTokens;
-            wastedTokens += Math.max(0, fullTokens - surgicalEquivalent);
+            fullReadWastedTokens += waste;
             currentTurnActions.push({
               type: 'read',
               path: targetPath,
@@ -521,6 +550,7 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
             uneditedReadPaths.delete(targetPath);
           }
           lastCommandFailed = false;
+          lastFailedCommandSig = null;
           baselineToolTokens += 400;
           currentTurnActions.push({ type: 'edit', path: targetPath });
         } else if (
@@ -530,6 +560,11 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
           name.includes('exec')
         ) {
           commandCalls++;
+          const cmdRaw = String(
+            args.command || args.CommandLine || args.cmd || args.script || ''
+          ).trim();
+          const cmdSig = cmdRaw ? cmdRaw.split(/\s+/)[0].toLowerCase() : '__unspecified_cmd__';
+
           const failed =
             step.status === 'ERROR' ||
             step.is_error === true ||
@@ -537,15 +572,25 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
           const cmdTok = actualReadTokensFromResult(observedResult, 500);
           baselineToolTokens += cmdTok;
 
-          if (failed && lastCommandFailed) {
+          // Only count as a blind retry if the previous command failed AND either the command signature matches
+          // (e.g. re-running the same tool/test runner) or neither command specified a command string.
+          const isSameFailedCommand =
+            failed &&
+            lastCommandFailed &&
+            (cmdSig === lastFailedCommandSig ||
+              cmdSig === '__unspecified_cmd__' ||
+              lastFailedCommandSig === '__unspecified_cmd__');
+
+          if (isSameFailedCommand) {
             commandRetries++;
             const retryWaste = observedResult ? cmdTok : 2400;
-            wastedTokens += retryWaste;
+            retryWastedTokens += retryWaste;
             currentTurnActions.push({ type: 'command', isBlindRetry: true });
           } else {
             currentTurnActions.push({ type: 'command', isBlindRetry: false });
           }
           lastCommandFailed = failed;
+          lastFailedCommandSig = failed ? cmdSig : null;
         }
       }
     }
@@ -553,13 +598,28 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
     flushCurrentTurn();
   }
 
+  const wastedTokens =
+    fullReadWastedTokens +
+    mediumReadWastedTokens +
+    dupReadWastedTokens +
+    forbiddenReadWastedTokens +
+    retryWastedTokens +
+    rageWastedTokens;
+
   const totalTokens = baselineToolTokens > 0 ? baselineToolTokens : observedCharTokens;
   const clampedWastedTokens = Math.min(totalTokens, wastedTokens);
   const stingyTokens = Math.max(0, totalTokens - clampedWastedTokens);
 
-  const rawCostUsd = Number(((totalTokens / 1_000_000) * pricePerMillionInput).toFixed(4));
-  const stingyCostUsd = Number(((stingyTokens / 1_000_000) * pricePerMillionInput).toFixed(4));
-  const wastedUsd = Number(Math.max(0, rawCostUsd - stingyCostUsd).toFixed(4));
+  const toUsd = (tok) => Number(((tok / 1_000_000) * pricePerMillionInput).toFixed(4));
+
+  const fullReadUsd = toUsd(fullReadWastedTokens + mediumReadWastedTokens + forbiddenReadWastedTokens);
+  const dupReadUsd = toUsd(dupReadWastedTokens);
+  const retryUsd = toUsd(retryWastedTokens);
+  const rageUsd = toUsd(rageWastedTokens);
+
+  const rawCostUsd = toUsd(totalTokens);
+  const stingyCostUsd = toUsd(stingyTokens);
+  const wastedUsd = toUsd(clampedWastedTokens);
 
   const savingsPct =
     totalTokens > 0 ? Number((((totalTokens - stingyTokens) / totalTokens) * 100).toFixed(1)) : 0.0;
@@ -588,6 +648,14 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
     totalTokens,
     wastedTokens: clampedWastedTokens,
     stingyTokens,
+    fullReadWastedTokens,
+    dupReadWastedTokens,
+    retryWastedTokens,
+    rageWastedTokens,
+    fullReadUsd,
+    dupReadUsd,
+    retryUsd,
+    rageUsd,
     rawCostUsd,
     stingyCostUsd,
     wastedUsd,

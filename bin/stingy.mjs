@@ -11,6 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { analyzeJsonlLines } from '../src/core.mjs';
 
 const C = {
@@ -163,10 +164,10 @@ function runRoast() {
     diagnosis = 'DISCIPLINED CODER (Low Context Waste)';
   }
 
-  const fullReadUsd = ((s.fullFileReads * 2800) / 1_000_000) * 3.0;
-  const dupReadUsd = ((s.duplicateReads * 3600) / 1_000_000) * 3.0;
-  const retryUsd = ((s.commandRetries * 2400) / 1_000_000) * 3.0;
-  const rageUsd = ((s.rageMessages * 600) / 1_000_000) * 3.0;
+  const fullReadUsd = s.fullReadUsd;
+  const dupReadUsd = s.dupReadUsd;
+  const retryUsd = s.retryUsd;
+  const rageUsd = s.rageUsd;
 
   console.log('');
   console.log(`${C.yellow}${C.bold}  =================================================${C.reset}`);
@@ -304,7 +305,7 @@ function runInit() {
   ];
 
   const bundledSkill = path.join(
-    path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')),
+    path.dirname(fileURLToPath(import.meta.url)),
     '..',
     'skills',
     'stingy',
