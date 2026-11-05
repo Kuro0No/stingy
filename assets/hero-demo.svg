@@ -70,8 +70,8 @@
   <g class="mono fade-3">
     <text x="496" y="80" class="c-green">$</text>
     <text x="510" y="80" class="c-white">npm run benchmark</text>
-    <text x="496" y="106" class="c-gold">REPRODUCIBLE 3-TASK BENCHMARK SUITE</text>
-    <text x="496" y="124" class="c-dim">(Includes 8.2k sys prompt + 450t skill cost/turn)</text>
+    <text x="496" y="106" class="c-gold">TRACE-DRIVEN BENCHMARK MODEL (3 TASKS)</text>
+    <text x="496" y="124" class="c-dim">(Models 8.2k sys prompt + 450t skill + Prompt Cache)</text>
 
     <!-- Task 1 -->
     <text x="496" y="156" class="c-white">Task 1: Fix JWT Skew (1,240-line file)</text>
@@ -98,9 +98,9 @@
   <!-- Aggregate Summary Box -->
   <g class="mono fade-4">
     <rect x="496" y="352" width="388" height="110" rx="6" fill="#161B22" stroke="#3FB950" stroke-width="1.2"/>
-    <text x="512" y="376" class="c-white">AGGREGATE MEASURED RESULT:</text>
-    <text x="512" y="398" class="c-dim">Baseline Unconstrained:   404,669 input tokens</text>
-    <text x="512" y="418" class="c-green">Stingy (Scrooge Mode):     75,909 input tokens</text>
-    <text x="512" y="444" class="c-gold">TOTAL INPUT SAVINGS:      -81.2% (328,760 tok)</text>
+    <text x="512" y="376" class="c-white">MODEL AGGREGATE (UNCACHED + CACHED):</text>
+    <text x="512" y="398" class="c-dim">Baseline vs Stingy Tokens:  404.7k -&gt; 75.9k (-81.2%)</text>
+    <text x="512" y="418" class="c-green">Prompt-Cached Effective $:  $0.568 -&gt; $0.053 (-90.7%)</text>
+    <text x="512" y="444" class="c-gold">LIVE SESSION EXPECTATION:   ~35% to 80% input saved</text>
   </g>
 </svg>
