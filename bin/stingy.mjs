@@ -126,20 +126,20 @@ function runRoast() {
     return;
   }
 
-  const allLines = [];
+  const sessionList = [];
   for (const f of files) {
     try {
       const content = fs.readFileSync(f.path, 'utf8');
-      const lines = content.split(/\r?\n/);
-      for (const line of lines) {
-        if (line.trim()) allLines.push(line);
+      const lines = content.split(/\r?\n/).filter((l) => l.trim());
+      if (lines.length > 0) {
+        sessionList.push(lines);
       }
     } catch {
       // skip unreadable file
     }
   }
 
-  const s = analyzeJsonlLines(allLines, 3.0);
+  const s = analyzeJsonlLines(sessionList, 3.0);
 
   if (s.totalSteps === 0) {
     console.log('');
@@ -298,8 +298,10 @@ function runInit() {
   const modeIndex = args.indexOf('--mode');
   const mode = modeIndex !== -1 && args[modeIndex + 1] ? args[modeIndex + 1] : 'scrooge';
 
-  const skillDir = path.join(process.cwd(), '.agents', 'skills', 'stingy');
-  fs.mkdirSync(skillDir, { recursive: true });
+  const targetDirs = [
+    path.join(process.cwd(), '.claude', 'skills', 'stingy'),
+    path.join(process.cwd(), '.agents', 'skills', 'stingy')
+  ];
 
   const bundledSkill = path.join(
     path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')),
@@ -309,19 +311,26 @@ function runInit() {
     'SKILL.md'
   );
 
-  const targetSkill = path.join(skillDir, 'SKILL.md');
-  if (fs.existsSync(bundledSkill)) {
-    fs.copyFileSync(bundledSkill, targetSkill);
-  } else {
-    fs.writeFileSync(
-      targetSkill,
-      `---\nname: stingy\ndescription: Stingy Mode (${mode}) — Enforce 10-Coin Turn Budget & surgical line-range reads.\n---\n\n# Stingy Mode (${mode.toUpperCase()})\n1. Always grep with line numbers before reading files.\n2. Always supply StartLine/EndLine (max 100 lines) when reading files.\n3. Never re-read a file already in context.\n`,
-      'utf8'
-    );
+  const createdPaths = [];
+  for (const dir of targetDirs) {
+    fs.mkdirSync(dir, { recursive: true });
+    const targetSkill = path.join(dir, 'SKILL.md');
+    if (fs.existsSync(bundledSkill)) {
+      fs.copyFileSync(bundledSkill, targetSkill);
+    } else {
+      fs.writeFileSync(
+        targetSkill,
+        `---\nname: stingy\ndescription: Stingy Mode (${mode}) — Enforce 10-Coin Turn Budget & surgical line-range reads.\n---\n\n# Stingy Mode (${mode.toUpperCase()})\n1. Always grep with line numbers before reading files.\n2. Always supply StartLine/EndLine or offset/limit (max 100 lines) when reading files.\n3. Never re-read a file already in context.\n`,
+        'utf8'
+      );
+    }
+    createdPaths.push(path.relative(process.cwd(), targetSkill));
   }
 
   console.log(`\n${C.green}${C.bold}🪙 Stingy Mode (${mode.toUpperCase()}) installed!${C.reset}`);
-  console.log(`  ${C.dim}Created:${C.reset} ${path.relative(process.cwd(), targetSkill)}`);
+  for (const p of createdPaths) {
+    console.log(`  ${C.dim}Created:${C.reset} ${p}`);
+  }
   console.log(
     `  ${C.dim}Activate in Claude Code / Antigravity / Cursor:${C.reset} ${C.yellow}/stingy ${mode}${C.reset}\n`
   );
