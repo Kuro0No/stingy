@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 
 /**
- * 🪙 STINGY CLI — The Tightwad Accountant for AI Coding Agents
+ * 🪙 STINGY CLI — Input Token & Tool-Call Auditor for AI Coding Agents
  * Commands:
- *   npx stingy roast          -> Scan local AI logs & print a Supermarket Autopsy Receipt
- *   npx stingy audit [dir]    -> Find "Token Black Holes" in your repo & generate .claudeignore
- *   npx stingy init [mode]    -> Install Stingy Mode into .agents/skills, CLAUDE.md, or .cursorrules
+ *   stingy roast [path]    -> Audit local JSONL transcripts & print a Token Autopsy Receipt
+ *   stingy audit [dir]     -> Find high-token files ("Token Black Holes") & generate .claudeignore
+ *   stingy init [--mode]   -> Install Stingy Mode into .agents/skills, CLAUDE.md, or .cursorrules
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { analyzeJsonlLines } from '../src/core.mjs';
 
 const C = {
   reset: '\x1b[0m',
@@ -20,9 +21,7 @@ const C = {
   green: '\x1b[32m',
   yellow: '\x1b[33m',
   cyan: '\x1b[36m',
-  white: '\x1b[37m',
-  bgRed: '\x1b[41m',
-  bgGreen: '\x1b[42m'
+  white: '\x1b[37m'
 };
 
 const args = process.argv.slice(2);
@@ -38,20 +37,22 @@ function padLeft(str, len) {
   return s.length >= len ? s.slice(0, len) : ' '.repeat(len - s.length) + s;
 }
 
-/**
- * Find local JSONL transcript logs from Claude Code, Antigravity, or Cursor
- */
-function findLocalLogs() {
-  const home = os.homedir();
-  const candidates = [
-    path.join(home, '.claude', 'projects'),
-    path.join(home, '.gemini', 'antigravity', 'brain')
-  ];
+function formatUsd(val) {
+  const n = Number(val || 0);
+  if (n === 0) return '$0.00';
+  if (n < 0.01) return `$${n.toFixed(4)}`;
+  return `$${n.toFixed(2)}`;
+}
 
+/**
+ * Discover JSONL session logs from an explicit path or default HOME locations.
+ * Respects process.env.HOME / process.env.USERPROFILE for isolated testing.
+ */
+export function findLocalLogs(customTarget = null) {
   const jsonlFiles = [];
 
   function walk(dir, depth = 0) {
-    if (depth > 4 || !fs.existsSync(dir)) return;
+    if (depth > 5 || !fs.existsSync(dir)) return;
     let entries = [];
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -62,16 +63,41 @@ function findLocalLogs() {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         walk(fullPath, depth + 1);
-      } else if (entry.isFile() && entry.name.endsWith('.jsonl') && !entry.name.includes('full')) {
+      } else if (
+        entry.isFile() &&
+        entry.name.endsWith('.jsonl') &&
+        !entry.name.includes('transcript_full')
+      ) {
         try {
           const stat = fs.statSync(fullPath);
-          jsonlFiles.push({ path: fullPath, size: stat.size, mtime: stat.mtimeMs });
+          if (stat.size > 0) {
+            jsonlFiles.push({ path: fullPath, size: stat.size, mtime: stat.mtimeMs });
+          }
         } catch {
-          // ignore
+          // ignore unreadable file
         }
       }
     }
   }
+
+  if (customTarget && !customTarget.startsWith('-')) {
+    const resolved = path.resolve(process.cwd(), customTarget);
+    if (fs.existsSync(resolved)) {
+      const stat = fs.statSync(resolved);
+      if (stat.isFile()) {
+        return [{ path: resolved, size: stat.size, mtime: stat.mtimeMs }];
+      }
+      walk(resolved, 0);
+      return jsonlFiles.sort((a, b) => b.mtime - a.mtime).slice(0, 50);
+    }
+    return [];
+  }
+
+  const home = process.env.HOME || process.env.USERPROFILE || os.homedir();
+  const candidates = [
+    path.join(home, '.claude', 'projects'),
+    path.join(home, '.gemini', 'antigravity', 'brain')
+  ];
 
   for (const dir of candidates) {
     walk(dir);
@@ -81,207 +107,134 @@ function findLocalLogs() {
 }
 
 /**
- * Analyze JSONL transcripts to calculate real token waste & roast metrics
- */
-function analyzeTranscripts(files) {
-  let totalSteps = 0;
-  let fullFileReads = 0;
-  let surgicalReads = 0;
-  let grepCalls = 0;
-  let commandRetries = 0;
-  let rageMessages = 0;
-  let totalCharsProcessed = 0;
-  let biggestTurnChars = 0;
-
-  const rageRegex = /\b(wtf|wrong|fix it|broke|broken|again|stupid|sai rồi|lỗi rồi|sửa lại)\b/i;
-
-  for (const file of files) {
-    let raw = '';
-    try {
-      raw = fs.readFileSync(file.path, 'utf8');
-    } catch {
-      continue;
-    }
-    const lines = raw.split('\n').filter(Boolean);
-    let lastCmdFailed = false;
-
-    for (const line of lines) {
-      totalSteps++;
-      totalCharsProcessed += line.length;
-      if (line.length > biggestTurnChars) biggestTurnChars = line.length;
-
-      if (line.includes('"read_file"') || line.includes('"Read"')) {
-        if (line.includes('"StartLine"') || line.includes('"offset"') || line.includes('"limit"')) {
-          surgicalReads++;
-        } else {
-          fullFileReads++;
-        }
-      }
-
-      if (line.includes('"grep"') || line.includes('"Grep"') || line.includes('"ripgrep"')) {
-        grepCalls++;
-      }
-
-      if (line.includes('"USER_INPUT"') || line.includes('"user"')) {
-        if (rageRegex.test(line)) rageMessages++;
-      }
-
-      if (line.includes('"ERROR"') || line.includes('Command exited with code 1')) {
-        if (lastCmdFailed) commandRetries++;
-        lastCmdFailed = true;
-      } else if (line.includes('"run_command"') || line.includes('"Bash"')) {
-        lastCmdFailed = false;
-      }
-    }
-  }
-
-  // Fallback realistic simulation if user runs in a clean environment with tiny logs
-  if (totalSteps < 10) {
-    totalSteps = 142;
-    fullFileReads = 38;
-    surgicalReads = 6;
-    grepCalls = 5;
-    commandRetries = 9;
-    rageMessages = 7;
-    totalCharsProcessed = 1840000;
-    biggestTurnChars = 96000;
-  }
-
-  const estimatedTotalTokens = Math.max(12000, Math.round(totalCharsProcessed / 3.8));
-  const wastedFromFullReads = fullFileReads * 3200;
-  const wastedFromRetries = commandRetries * 4500;
-  const wastedFromHistoryBloat = Math.round(estimatedTotalTokens * 0.42);
-  const totalWastedTokens = Math.min(
-    Math.round(estimatedTotalTokens * 0.81),
-    wastedFromFullReads + wastedFromRetries + wastedFromHistoryBloat
-  );
-
-  // Price calculation based on $3.00 / 1M input tokens + context compounding
-  const actualCostUsd = Math.max(0.45, (estimatedTotalTokens / 1_000_000) * 4.8);
-  const wastedCostUsd = Math.max(0.32, (totalWastedTokens / 1_000_000) * 4.8);
-  const stingyCostUsd = Math.max(0.09, actualCostUsd - wastedCostUsd);
-  const savingsPct = Math.min(86, Math.max(64, Math.round((wastedCostUsd / actualCostUsd) * 100)));
-
-  let archetype = 'THE CONTEXT HOARDER (Lv. 72)';
-  if (fullFileReads > surgicalReads * 2) {
-    archetype = 'THE WHOLE-FILE GLUTTON (Lv. 88)';
-  } else if (rageMessages >= 5) {
-    archetype = 'THE RAGE-PROMPT ARSONIST (Lv. 94)';
-  } else if (surgicalReads > fullFileReads) {
-    archetype = 'SURGICAL SNIPER INITIATE (Lv. 45)';
-  }
-
-  return {
-    sessionsScanned: Math.max(1, files.length),
-    totalSteps,
-    fullFileReads,
-    surgicalReads,
-    grepCalls,
-    commandRetries,
-    rageMessages,
-    estimatedTotalTokens,
-    totalWastedTokens,
-    actualCostUsd: actualCostUsd.toFixed(2),
-    wastedCostUsd: wastedCostUsd.toFixed(2),
-    stingyCostUsd: stingyCostUsd.toFixed(2),
-    savingsPct,
-    archetype
-  };
-}
-
-/**
- * Print the viral ASCII Supermarket Receipt
+ * Run the Honest Token Autopsy Receipt on real JSONL transcripts.
  */
 function runRoast() {
-  const logs = findLocalLogs();
-  const stats = analyzeTranscripts(logs);
-  const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 19);
+  const customPath = args[1] && !args[1].startsWith('-') ? args[1] : null;
+  const files = findLocalLogs(customPath);
 
-  const line = (label, qty, cost) => {
-    return `  | ${padRight(label, 28)} ${padLeft(qty, 6)}  ${padLeft(cost, 8)} |`;
-  };
+  if (files.length === 0) {
+    console.log('');
+    console.log(`${C.yellow}No local JSONL session transcripts found.${C.reset}`);
+    console.log(
+      `${C.dim}Searched in: ~/.claude/projects and ~/.gemini/antigravity/brain${C.reset}`
+    );
+    console.log(
+      `${C.dim}Usage: stingy roast [path-to-session.jsonl | path-to-logs-dir]${C.reset}`
+    );
+    console.log('');
+    return;
+  }
+
+  const allLines = [];
+  for (const f of files) {
+    try {
+      const content = fs.readFileSync(f.path, 'utf8');
+      const lines = content.split(/\r?\n/);
+      for (const line of lines) {
+        if (line.trim()) allLines.push(line);
+      }
+    } catch {
+      // skip unreadable file
+    }
+  }
+
+  const s = analyzeJsonlLines(allLines, 3.0);
+
+  if (s.totalSteps === 0) {
+    console.log('');
+    console.log(`${C.yellow}No valid JSONL transcript records found in scanned files.${C.reset}`);
+    console.log('');
+    return;
+  }
+
+  let diagnosis = 'CERTIFIED SCROOGE (0% Waste Detected)';
+  if (s.wastedTokens === 0) {
+    diagnosis = 'CERTIFIED SCROOGE (0% Waste Detected)';
+  } else if (s.duplicateReads > 5) {
+    diagnosis = 'THE GOLDFISH AGENT (Re-reads Same Files)';
+  } else if (s.fullFileReads > s.surgicalReads * 2 && s.fullFileReads >= 5) {
+    diagnosis = 'THE WHOLE-FILE GLUTTON (Unbounded Reads)';
+  } else if (s.commandRetries >= 5) {
+    diagnosis = 'THE BLIND LOOP GAMBLER (Retry Loops)';
+  } else if (s.savingsPct >= 25) {
+    diagnosis = 'CONTEXT OVER-SPENDER (Needs Range Bounds)';
+  } else {
+    diagnosis = 'DISCIPLINED CODER (Low Context Waste)';
+  }
+
+  const fullReadUsd = ((s.fullFileReads * 2800) / 1_000_000) * 3.0;
+  const dupReadUsd = ((s.duplicateReads * 3600) / 1_000_000) * 3.0;
+  const retryUsd = ((s.commandRetries * 2400) / 1_000_000) * 3.0;
+  const rageUsd = ((s.rageMessages * 600) / 1_000_000) * 3.0;
 
   console.log('');
   console.log(`${C.yellow}${C.bold}  =================================================${C.reset}`);
   console.log(`${C.yellow}${C.bold}  |          🪙 STINGY TOKEN AUTOPSY 🪙           |${C.reset}`);
   console.log(`${C.yellow}  |      "Why burn 50k tokens when 400 do?"       |${C.reset}`);
   console.log(`  |-----------------------------------------------|`);
-  console.log(`  | DATE: ${padRight(nowStr, 39)} |`);
-  console.log(`  | LOGS SCANNED: ${padRight(`${stats.sessionsScanned} local session(s)`, 31)} |`);
+  console.log(
+    `  | LOGS SCANNED: ${padRight(`${files.length} files (${s.totalSteps} steps)`, 31)} |`
+  );
   console.log(`  |-----------------------------------------------|`);
   console.log(`  | ITEM                         QTY     EST. USD |`);
   console.log(`  |-----------------------------------------------|`);
   console.log(
-    line(
-      'Full-File Reads (No Range)',
-      `${stats.fullFileReads}x`,
-      `$${(stats.fullFileReads * 0.045).toFixed(2)}`
-    )
+    `  | Full-File Reads (No Range)  ${padLeft(s.fullFileReads + 'x', 5)}   ${padLeft(formatUsd(fullReadUsd), 9)} |`
   );
   console.log(
-    line(
-      'Blind Command Retry Loops',
-      `${stats.commandRetries}x`,
-      `$${(stats.commandRetries * 0.065).toFixed(2)}`
-    )
+    `  | Duplicate File Re-Reads     ${padLeft(s.duplicateReads + 'x', 5)}   ${padLeft(formatUsd(dupReadUsd), 9)} |`
   );
   console.log(
-    line(
-      'Rage Prompts ("fix it/wrong")',
-      `${stats.rageMessages}x`,
-      `$${(stats.rageMessages * 0.05).toFixed(2)}`
-    )
+    `  | Consecutive Cmd Retries     ${padLeft(s.commandRetries + 'x', 5)}   ${padLeft(formatUsd(retryUsd), 9)} |`
   );
   console.log(
-    line(
-      'Uncompacted History Tax',
-      `${stats.totalSteps}t`,
-      `$${( Number(stats.wastedCostUsd) * 0.45 ).toFixed(2)}`
-    )
+    `  | Frustration / Fix Prompts   ${padLeft(s.rageMessages + 'x', 5)}   ${padLeft(formatUsd(rageUsd), 9)} |`
   );
   console.log(
-    line(
-      'Surgical Line-Range Reads',
-      `${stats.surgicalReads}x`,
-      `$${(stats.surgicalReads * 0.004).toFixed(2)}`
-    )
+    `  | ${C.green}Surgical Line-Range Reads   ${padLeft(s.surgicalReads + 'x', 5)}       $0.00${C.reset} |`
+  );
+  console.log(
+    `  | ${C.green}Targeted Grep Searches      ${padLeft(s.grepCalls + 'x', 5)}       $0.00${C.reset} |`
   );
   console.log(`  |-----------------------------------------------|`);
   console.log(
-    `  | ${C.bold}TOTAL TOKENS PROCESSED${C.reset}       ${padLeft(stats.estimatedTotalTokens.toLocaleString(), 16)} |`
+    `  | 10-COIN TURN BUDGET SCORE:  ${padLeft(`${s.avgTurnCoins} / 10.0 Coins`, 17)} |`
   );
   console.log(
-    `  | ${C.red}${C.bold}WASTED INPUT TOKENS${C.reset}          ${C.red}${padLeft(stats.totalWastedTokens.toLocaleString(), 16)}${C.reset} |`
+    `  | BANKRUPT TURNS (>10 Coins): ${padLeft(`${s.bankruptTurns} / ${s.totalTurnsScored} turns`, 17)} |`
   );
   console.log(`  |-----------------------------------------------|`);
-  console.log(`  | EST. RAW AGENT BILL:                 ${padLeft(`$${stats.actualCostUsd}`, 8)} |`);
   console.log(
-    `  | ${C.green}${C.bold}WITH STINGY MODE (-${stats.savingsPct}%):${C.reset}             ${C.green}${C.bold}${padLeft(`$${stats.stingyCostUsd}`, 8)}${C.reset} |`
+    `  | EST. TOKENS PROCESSED      ${padLeft(s.totalTokens.toLocaleString('en-US'), 18)} |`
   );
   console.log(
-    `  | ${C.yellow}${C.bold}MONEY YOU LIT ON FIRE:${C.reset}               ${C.yellow}${C.bold}${padLeft(`$${stats.wastedCostUsd}`, 8)}${C.reset} |`
+    `  | AVOIDABLE WASTED TOKENS    ${padLeft(s.wastedTokens.toLocaleString('en-US'), 18)} |`
+  );
+  console.log(`  |-----------------------------------------------|`);
+  console.log(`  | EST. BASELINE COST (@$3/1M):   ${padLeft(formatUsd(s.rawCostUsd), 14)} |`);
+  console.log(
+    `  | ${C.green}WITH STINGY MODE (${padRight(`-${s.savingsPct}%):`, 9)}   ${padLeft(formatUsd(s.stingyCostUsd), 14)}${C.reset} |`
+  );
+  console.log(
+    `  | ${C.red}${C.bold}AVOIDABLE TOKEN WASTE:         ${padLeft(formatUsd(s.wastedUsd), 14)}${C.reset} |`
   );
   console.log(`  |-----------------------------------------------|`);
   console.log(`  | DIAGNOSIS:                                    |`);
-  console.log(`  | ${C.cyan}${C.bold}${padRight(stats.archetype, 45)}${C.reset} |`);
-  console.log(`  |-----------------------------------------------|`);
-  console.log(`  | FIX IT IN 5 SECONDS:                          |`);
-  console.log(`  |   ${C.green}npx stingy-ai init --mode scrooge${C.reset}           |`);
-  console.log(`  |   Pairs with: ${C.bold}caveman${C.reset} + ${C.bold}ponytail${C.reset}              |`);
+  console.log(`  | ${C.cyan}${C.bold}${padRight(diagnosis, 45)}${C.reset} |`);
   console.log(`${C.yellow}${C.bold}  =================================================${C.reset}`);
   console.log('');
 }
 
 /**
- * Audit a workspace for Token Black Holes (huge files, missing ignore files)
+ * Audit a workspace directory to find "Token Black Holes"
  */
-function runAudit() {
-  const targetDir = path.resolve(args[1] || process.cwd());
-  const bigFiles = [];
-  const ignoredDirs = new Set(['node_modules', '.git', 'dist', 'build', '.next', 'coverage', 'vendor']);
+function runAudit(targetDir = process.cwd()) {
+  const heavyFiles = [];
+  const ignoreDirs = new Set(['.git', 'node_modules', '.next', 'dist', 'build', 'coverage']);
 
-  function scanDir(dir, depth = 0) {
-    if (depth > 4 || !fs.existsSync(dir)) return;
+  function scan(dir, depth = 0) {
+    if (depth > 5) return;
     let entries = [];
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -289,18 +242,18 @@ function runAudit() {
       return;
     }
     for (const entry of entries) {
-      if (ignoredDirs.has(entry.name)) continue;
-      const fullPath = path.join(dir, entry.name);
+      if (ignoreDirs.has(entry.name)) continue;
+      const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        scanDir(fullPath, depth + 1);
+        scan(full, depth + 1);
       } else if (entry.isFile()) {
         try {
-          const stat = fs.statSync(fullPath);
-          if (stat.size > 15000) {
-            const estTokens = Math.round(stat.size / 3.8);
-            bigFiles.push({
-              rel: path.relative(targetDir, fullPath),
-              tokens: estTokens
+          const stat = fs.statSync(full);
+          if (stat.size > 12 * 1024) {
+            heavyFiles.push({
+              relPath: path.relative(targetDir, full),
+              bytes: stat.size,
+              estTokens: Math.round(stat.size / 4)
             });
           }
         } catch {
@@ -310,61 +263,83 @@ function runAudit() {
     }
   }
 
-  scanDir(targetDir);
-  bigFiles.sort((a, b) => b.tokens - a.tokens);
+  scan(targetDir);
+  heavyFiles.sort((a, b) => b.estTokens - a.estTokens);
+  const top = heavyFiles.slice(0, 10);
 
-  console.log(`\n${C.bold}🪙 STINGY REPO AUDIT — Scanning ${targetDir}${C.reset}\n`);
-  if (bigFiles.length === 0) {
-    console.log(`${C.green}✓ Clean repo! No massive token black-hole files (>4k tokens) detected.${C.reset}\n`);
+  console.log(
+    `\n${C.yellow}${C.bold}🪙 STINGY REPO AUDIT — Top Token Black Holes in ${path.basename(targetDir)}${C.reset}\n`
+  );
+
+  if (top.length === 0) {
+    console.log(
+      `${C.green}✓ Clean repo! No files >12KB found that would blow up your context window.${C.reset}\n`
+    );
     return;
   }
 
-  console.log(`${C.yellow}⚠ Found ${bigFiles.length} high-token file(s) that cost 4.0+ Coins if read whole:${C.reset}`);
-  for (const f of bigFiles.slice(0, 10)) {
-    console.log(`  - ${padRight(f.rel, 42)} ${C.red}~${f.tokens.toLocaleString()} tokens${C.reset}/read`);
+  console.log(`  ${padRight('FILE PATH', 42)} ${padLeft('EST. TOKENS', 14)}   ${padLeft('COIN COST', 10)}`);
+  console.log(`  ${'-'.repeat(70)}`);
+  for (const f of top) {
+    const coins = f.estTokens > 10000 ? '10.0 (BAN)' : f.estTokens > 3000 ? '4.0 Coins' : '2.0 Coins';
+    console.log(
+      `  ${padRight(f.relPath, 42)} ${C.red}${padLeft(f.estTokens.toLocaleString('en-US') + ' tok', 14)}${C.reset}   ${padLeft(coins, 10)}`
+    );
   }
-  console.log(`\n${C.cyan}Tip:${C.reset} Run ${C.bold}npx stingy-ai init${C.reset} to force agents to use grep + line-ranges on these files.\n`);
+  console.log(
+    `\n  ${C.cyan}Tip:${C.reset} Run ${C.bold}npx github:Kuro0No/stingy init${C.reset} to force agents to use surgical line ranges on these files.\n`
+  );
 }
 
 /**
- * Install Stingy Mode into the current workspace (.agents/skills/stingy/SKILL.md & CLAUDE.md)
+ * Install Stingy Mode skill into current workspace
  */
 function runInit() {
-  const modeArg = args.find((a) => ['lite', 'strict', 'scrooge'].includes(a.toLowerCase())) || 'strict';
-  const cwd = process.cwd();
-  const skillDestDir = path.join(cwd, '.agents', 'skills', 'stingy');
-  const skillDestFile = path.join(skillDestDir, 'SKILL.md');
+  const modeIndex = args.indexOf('--mode');
+  const mode = modeIndex !== -1 && args[modeIndex + 1] ? args[modeIndex + 1] : 'scrooge';
 
-  const sourceSkill = path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..', 'skills', 'stingy', 'SKILL.md');
+  const skillDir = path.join(process.cwd(), '.agents', 'skills', 'stingy');
+  fs.mkdirSync(skillDir, { recursive: true });
 
-  fs.mkdirSync(skillDestDir, { recursive: true });
-  if (fs.existsSync(sourceSkill)) {
-    fs.copyFileSync(sourceSkill, skillDestFile);
+  const bundledSkill = path.join(
+    path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')),
+    '..',
+    'skills',
+    'stingy',
+    'SKILL.md'
+  );
+
+  const targetSkill = path.join(skillDir, 'SKILL.md');
+  if (fs.existsSync(bundledSkill)) {
+    fs.copyFileSync(bundledSkill, targetSkill);
   } else {
     fs.writeFileSync(
-      skillDestFile,
-      `---\nname: stingy\ndescription: Stingy Mode (${modeArg}) — Cut 80% input & tool token waste.\n---\n\nAlways grep with line numbers before reading files. Read at most 120 lines per call. Enforce a 10-Coin per-turn tool budget.\n`
+      targetSkill,
+      `---\nname: stingy\ndescription: Stingy Mode (${mode}) — Enforce 10-Coin Turn Budget & surgical line-range reads.\n---\n\n# Stingy Mode (${mode.toUpperCase()})\n1. Always grep with line numbers before reading files.\n2. Always supply StartLine/EndLine (max 100 lines) when reading files.\n3. Never re-read a file already in context.\n`,
+      'utf8'
     );
   }
 
-  console.log(`\n${C.green}${C.bold}✓ Stingy Mode (${modeArg.toUpperCase()}) installed!${C.reset}`);
-  console.log(`  Skill written to: ${C.cyan}${path.relative(cwd, skillDestFile)}${C.reset}`);
-  console.log(`  Activate in chat: ${C.yellow}/stingy ${modeArg}${C.reset}\n`);
+  console.log(`\n${C.green}${C.bold}🪙 Stingy Mode (${mode.toUpperCase()}) installed!${C.reset}`);
+  console.log(`  ${C.dim}Created:${C.reset} ${path.relative(process.cwd(), targetSkill)}`);
+  console.log(
+    `  ${C.dim}Activate in Claude Code / Antigravity / Cursor:${C.reset} ${C.yellow}/stingy ${mode}${C.reset}\n`
+  );
 }
 
 if (command === 'roast') {
   runRoast();
 } else if (command === 'audit') {
-  runAudit();
+  runAudit(args[1] || process.cwd());
 } else if (command === 'init') {
   runInit();
 } else {
   console.log(`
-${C.yellow}${C.bold}🪙 stingy${C.reset} — The Tightwad Accountant for AI Coding Agents
+${C.yellow}${C.bold}🪙 stingy${C.reset} — Cut ~80% of AI agent input & tool-call token waste.
 
 ${C.bold}Usage:${C.reset}
-  npx stingy-ai roast                Scan your local AI logs & print your Token Autopsy Receipt
-  npx stingy-ai audit [dir]          Find "Token Black Hole" files in a repository
-  npx stingy-ai init [scrooge]       Install Stingy Skill (.agents/skills/stingy/SKILL.md)
+  npx github:Kuro0No/stingy roast [path]       ${C.dim}# Audit local AI transcripts & print Token Autopsy Receipt${C.reset}
+  npx github:Kuro0No/stingy audit [dir]        ${C.dim}# Scan repo for Token Black Hole files${C.reset}
+  npx github:Kuro0No/stingy init --mode scrooge ${C.dim}# Install /stingy skill into your project${C.reset}
 `);
 }
