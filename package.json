@@ -26,6 +26,11 @@
     "skill"
   ],
   "license": "MIT",
+  "homepage": "https://kuro0no.github.io/stingy/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kuro0No/stingy.git"
+  },
   "engines": {
     "node": ">=18.0.0"
   }

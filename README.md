@@ -6,7 +6,9 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](#license)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](#)
-[![Works With](https://img.shields.io/badge/works%20with-Claude%20Code%20%7C%20Cursor%20%7C%20Antigravity-orange.svg)](#)
+[![Live Demo](https://img.shields.io/badge/demo-kuro0no.github.io%2Fstingy-orange.svg)](https://kuro0no.github.io/stingy/)
+
+🌐 **Interactive Token Autopsy Simulator & Live Demo:** [https://kuro0no.github.io/stingy/](https://kuro0no.github.io/stingy/)
 
 ---
 
@@ -75,19 +77,19 @@ npx stingy-ai roast
 
 ### Option A: Claude Code Plugin Marketplace (like `caveman`)
 ```bash
-/plugin marketplace add <your-github-username>/stingy
+/plugin marketplace add Kuro0No/stingy
 /plugin install stingy@stingy
 ```
 
 ### Option B: Universal Skills CLI (Claude Code, Antigravity, Cursor, Codex, Windsurf)
 ```bash
-npx skills add <your-github-username>/stingy
+npx skills add Kuro0No/stingy
 ```
 
 ### Option C: Antigravity Plugin Bundle
 Copy or clone this repo into `~/.gemini/config/plugins/stingy`:
 ```bash
-git clone https://github.com/<your-github-username>/stingy.git ~/.gemini/config/plugins/stingy
+git clone https://github.com/Kuro0No/stingy.git ~/.gemini/config/plugins/stingy
 ```
 
 ### Option D: Zero-Config NPX CLI
