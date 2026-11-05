@@ -38,11 +38,10 @@ function padLeft(str, len) {
   return s.length >= len ? s.slice(0, len) : ' '.repeat(len - s.length) + s;
 }
 
-function formatUsd(val) {
+function formatUsd(val, decimals = 2) {
   const n = Number(val || 0);
-  if (n === 0) return '$0.00';
-  if (n < 0.01) return `$${n.toFixed(4)}`;
-  return `$${n.toFixed(2)}`;
+  if (n === 0) return decimals === 4 ? '$0.0000' : '$0.00';
+  return `$${n.toFixed(decimals)}`;
 }
 
 /**
@@ -112,6 +111,16 @@ export function findLocalLogs(customTarget = null) {
  */
 function runRoast() {
   const customPath = args[1] && !args[1].startsWith('-') ? args[1] : null;
+  if (customPath && !fs.existsSync(path.resolve(process.cwd(), customPath))) {
+    console.log('');
+    console.log(`${C.red}Path not found: ${customPath}${C.reset}`);
+    console.log(
+      `${C.dim}Usage: stingy roast [path-to-session.jsonl | path-to-logs-dir]${C.reset}`
+    );
+    console.log('');
+    return;
+  }
+
   const files = findLocalLogs(customPath);
 
   if (files.length === 0) {
@@ -168,6 +177,8 @@ function runRoast() {
   const dupReadUsd = s.dupReadUsd;
   const retryUsd = s.retryUsd;
   const rageUsd = s.rageUsd;
+  const decimals = s.rawCostUsd > 0 && s.rawCostUsd < 0.02 ? 4 : 2;
+  const zeroStr = formatUsd(0, decimals);
 
   console.log('');
   console.log(`${C.yellow}${C.bold}  =================================================${C.reset}`);
@@ -181,22 +192,22 @@ function runRoast() {
   console.log(`  | ITEM                         QTY     EST. USD |`);
   console.log(`  |-----------------------------------------------|`);
   console.log(
-    `  | Full-File Reads (No Range)  ${padLeft(s.fullFileReads + 'x', 5)}   ${padLeft(formatUsd(fullReadUsd), 9)} |`
+    `  | Full-File Reads (No Range)  ${padLeft(s.fullFileReads + 'x', 5)}   ${padLeft(formatUsd(fullReadUsd, decimals), 9)} |`
   );
   console.log(
-    `  | Duplicate File Re-Reads     ${padLeft(s.duplicateReads + 'x', 5)}   ${padLeft(formatUsd(dupReadUsd), 9)} |`
+    `  | Duplicate File Re-Reads     ${padLeft(s.duplicateReads + 'x', 5)}   ${padLeft(formatUsd(dupReadUsd, decimals), 9)} |`
   );
   console.log(
-    `  | Consecutive Cmd Retries     ${padLeft(s.commandRetries + 'x', 5)}   ${padLeft(formatUsd(retryUsd), 9)} |`
+    `  | Consecutive Cmd Retries     ${padLeft(s.commandRetries + 'x', 5)}   ${padLeft(formatUsd(retryUsd, decimals), 9)} |`
   );
   console.log(
-    `  | Frustration / Fix Prompts   ${padLeft(s.rageMessages + 'x', 5)}   ${padLeft(formatUsd(rageUsd), 9)} |`
+    `  | Frustration / Fix Prompts   ${padLeft(s.rageMessages + 'x', 5)}   ${padLeft(formatUsd(rageUsd, decimals), 9)} |`
   );
   console.log(
-    `  | ${C.green}Surgical Line-Range Reads   ${padLeft(s.surgicalReads + 'x', 5)}       $0.00${C.reset} |`
+    `  | ${C.green}Surgical Line-Range Reads   ${padLeft(s.surgicalReads + 'x', 5)}   ${padLeft(zeroStr, 9)}${C.reset} |`
   );
   console.log(
-    `  | ${C.green}Targeted Grep Searches      ${padLeft(s.grepCalls + 'x', 5)}       $0.00${C.reset} |`
+    `  | ${C.green}Targeted Grep Searches      ${padLeft(s.grepCalls + 'x', 5)}   ${padLeft(zeroStr, 9)}${C.reset} |`
   );
   console.log(`  |-----------------------------------------------|`);
   console.log(
@@ -213,12 +224,12 @@ function runRoast() {
     `  | AVOIDABLE WASTED TOKENS    ${padLeft(s.wastedTokens.toLocaleString('en-US'), 18)} |`
   );
   console.log(`  |-----------------------------------------------|`);
-  console.log(`  | EST. BASELINE COST (@$3/1M):   ${padLeft(formatUsd(s.rawCostUsd), 14)} |`);
+  console.log(`  | EST. BASELINE COST (@$3/1M):   ${padLeft(formatUsd(s.rawCostUsd, decimals), 14)} |`);
   console.log(
-    `  | ${C.green}WITH STINGY MODE (${padRight(`-${s.savingsPct}%):`, 9)}   ${padLeft(formatUsd(s.stingyCostUsd), 14)}${C.reset} |`
+    `  | ${C.green}WITH STINGY MODE (${padRight(`-${s.savingsPct}%):`, 9)}   ${padLeft(formatUsd(s.stingyCostUsd, decimals), 14)}${C.reset} |`
   );
   console.log(
-    `  | ${C.red}${C.bold}AVOIDABLE TOKEN WASTE:         ${padLeft(formatUsd(s.wastedUsd), 14)}${C.reset} |`
+    `  | ${C.red}${C.bold}AVOIDABLE TOKEN WASTE:         ${padLeft(formatUsd(s.wastedUsd, decimals), 14)}${C.reset} |`
   );
   console.log(`  |-----------------------------------------------|`);
   console.log(`  | DIAGNOSIS:                                    |`);

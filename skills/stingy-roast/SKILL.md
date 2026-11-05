@@ -9,7 +9,7 @@ Scans local AI coding sessions and prints a **Token Autopsy Supermarket Receipt*
 
 ## How to Execute
 
-1. Run the zero-dependency `stingy.mjs` script bundled with this plugin/repo (or via `npx stingy-ai roast`):
+1. Run the zero-dependency `stingy.mjs` script bundled with this plugin/repo (or via `npx github:Kuro0No/stingy roast`):
    ```bash
    node "<plugin-or-repo-root>/bin/stingy.mjs" roast
    ```

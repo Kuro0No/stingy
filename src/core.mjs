@@ -367,7 +367,10 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
       if (!rawLine || !rawLine.trim()) continue;
       observedCharTokens += estimateTokensFromChars(rawLine.length);
       try {
-        records.push(JSON.parse(rawLine));
+        const parsed = JSON.parse(rawLine);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          records.push(parsed);
+        }
       } catch {
         // skip malformed line
       }
@@ -563,17 +566,19 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
           const cmdRaw = String(
             args.command || args.CommandLine || args.cmd || args.script || ''
           ).trim();
-          const cmdSig = cmdRaw ? cmdRaw.split(/\s+/)[0].toLowerCase() : '__unspecified_cmd__';
+          const cmdSig = cmdRaw
+            ? cmdRaw.replace(/\s+/g, ' ').trim().toLowerCase()
+            : '__unspecified_cmd__';
 
           const failed =
             step.status === 'ERROR' ||
             step.is_error === true ||
             Boolean(observedResult && observedResult.isError);
-          const cmdTok = actualReadTokensFromResult(observedResult, 500);
+          const cmdTok = actualReadTokensFromResult(observedResult, failed ? 2400 : 500);
           baselineToolTokens += cmdTok;
 
-          // Only count as a blind retry if the previous command failed AND either the command signature matches
-          // (e.g. re-running the same tool/test runner) or neither command specified a command string.
+          // Only count as a blind retry if the previous command failed AND either the full normalized command
+          // matches (e.g. re-running the exact same failing command) or neither specified a command string.
           const isSameFailedCommand =
             failed &&
             lastCommandFailed &&
@@ -583,7 +588,7 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
 
           if (isSameFailedCommand) {
             commandRetries++;
-            const retryWaste = observedResult ? cmdTok : 2400;
+            const retryWaste = cmdTok;
             retryWastedTokens += retryWaste;
             currentTurnActions.push({ type: 'command', isBlindRetry: true });
           } else {

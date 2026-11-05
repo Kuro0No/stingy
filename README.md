@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="#license"><img src="https://img.shields.io/badge/License-MIT-black.svg" alt="License: MIT" /></a>
-  <a href="./test/stingy.test.mjs"><img src="https://img.shields.io/badge/tests-19%20passing-brightgreen.svg" alt="Tests: 19 passing" /></a>
+  <a href="./test/stingy.test.mjs"><img src="https://img.shields.io/badge/tests-23%20passing-brightgreen.svg" alt="Tests: 23 passing" /></a>
   <a href="./benchmarks/run-benchmark.mjs"><img src="https://img.shields.io/badge/trace%20model--81.2%25%20tokens-22c55e.svg" alt="Trace Model: -81.2% input tokens" /></a>
   <a href="https://kuro0no.github.io/stingy/"><img src="https://img.shields.io/badge/demo-kuro0no.github.io%2Fstingy-orange.svg" alt="Live Demo" /></a>
 </p>
@@ -126,7 +126,7 @@ The prompt skill ([`skills/stingy/SKILL.md`](./skills/stingy/SKILL.md)) instruct
 `stingy roast` parses real JSONL transcripts from **Claude Code** (`~/.claude/projects/**/*.jsonl`) and **Antigravity** (`~/.gemini/antigravity/brain/**/*.jsonl`) using [`analyzeJsonlLines()`](./src/core.mjs):
 
 * **Per-Session Isolation:** Duplicate file re-read tracking (`uneditedReadPaths`) is strictly scoped per session file — reading `config.ts` once in two separate sessions is never flagged as a duplicate read.
-* **User-Turn Grouping:** All assistant tool calls between one human prompt and the next are accumulated into a single User Turn (ignoring automated `tool_result` wrapper events), accurately flagging turns that exceed 10.0 Coins.
+* **User-Turn Grouping vs. Avoidable Waste:** All assistant tool calls between one human prompt and the next are accumulated into a single User Turn (ignoring automated `tool_result` wrapper events). Note that **Turn Budget (`>10.0 Coins`)** and **Avoidable Token Waste** measure two orthogonal dimensions: executing 15 surgical reads in a single turn costs `15.0 Coins` (1 Bankrupt Turn due to turn breadth) even though its **Avoidable Token Waste** is `0` tokens (`$0.00`) because every individual read was properly bounded.
 * **Dynamic `tool_result` Sizing:** When `tool_result` payloads are present in the transcript, `stingy roast` measures their actual line count and character length (a 1-line file read without `offset`/`limit` is recognized as a small file with `0` waste; a 2,000-line read scales waste proportionally to its actual size, falling back to heuristics only when payloads are omitted).
 * **Zero Fake Data or Clamps:** Empty `HOME` directories exit cleanly (`No local JSONL session transcripts found`), and a disciplined log with 100% surgical reads reports **`0` wasted tokens (`-0.0%`) and `CERTIFIED SCROOGE`**.
 

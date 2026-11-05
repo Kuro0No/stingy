@@ -442,6 +442,65 @@ test('Codex Round-3 Regression #5: stingy init from a directory path containing 
   }
 });
 
+test('Codex Round-4 Regression #1: npm test followed by npm run typecheck is NOT counted as a retry (full command normalized)', () => {
+  const diffSubcommands = [
+    JSON.stringify({
+      type: 'PLANNER_RESPONSE',
+      status: 'ERROR',
+      tool_calls: [{ name: 'run_command', arguments: { CommandLine: 'npm test' } }]
+    }),
+    JSON.stringify({
+      type: 'PLANNER_RESPONSE',
+      status: 'ERROR',
+      tool_calls: [{ name: 'run_command', arguments: { CommandLine: 'npm run typecheck' } }]
+    })
+  ];
+  assert.equal(analyzeJsonlLines(diffSubcommands).commandRetries, 0);
+});
+
+test('Codex Round-4 Regression #2: Failed command retry without tool_result keeps retryUsd === wastedUsd ($0.0072)', () => {
+  const twoFailedRetriesNoResult = [
+    JSON.stringify({
+      type: 'PLANNER_RESPONSE',
+      status: 'ERROR',
+      tool_calls: [{ name: 'run_command', arguments: { CommandLine: 'npm test' } }]
+    }),
+    JSON.stringify({
+      type: 'PLANNER_RESPONSE',
+      status: 'ERROR',
+      tool_calls: [{ name: 'run_command', arguments: { CommandLine: 'npm test' } }]
+    })
+  ];
+  const stats = analyzeJsonlLines(twoFailedRetriesNoResult);
+  assert.equal(stats.commandRetries, 1);
+  assert.equal(stats.retryUsd, stats.wastedUsd, `Expected retryUsd (${stats.retryUsd}) === wastedUsd (${stats.wastedUsd})`);
+});
+
+test('Codex Round-4 Regression #3: Literal JSON null or primitive lines in JSONL do not throw TypeError', () => {
+  const linesWithNulls = [
+    'null',
+    '123',
+    '"string_line"',
+    '[]',
+    JSON.stringify({
+      type: 'assistant',
+      message: {
+        role: 'assistant',
+        content: [{ type: 'tool_use', name: 'Read', input: { file_path: 'src/ok.ts', offset: 1, limit: 50 } }]
+      }
+    })
+  ];
+  const stats = analyzeJsonlLines(linesWithNulls);
+  assert.equal(stats.surgicalReads, 1);
+});
+
+test('Claude Round-4 Regression #4: stingy roast on non-existent path reports "Path not found"', () => {
+  const stdout = execFileSync(process.execPath, [CLI_PATH, 'roast', './definitely-missing-file-999.jsonl'], {
+    encoding: 'utf8'
+  });
+  assert.match(stdout, /Path not found/i);
+});
+
 test('Benchmark Model: 3-task trace model achieves >=80% uncached token reduction and >=75% prompt-cached USD reduction', () => {
   const report = runBenchmarks();
   assert.equal(report.tasks.length, 3);
