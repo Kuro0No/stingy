@@ -105,6 +105,46 @@ node ./bin/stingy.mjs roast ./benchmarks/fixtures/live-ab-stingy.jsonl
 
 ---
 
+## 🎨 Case Study #2: Complex Feature Building with `/stingy-lite` (Realtime CRDT Whiteboard)
+
+What happens when you are **building a complex multi-file feature** instead of hunting bugs? We tested `/stingy-lite` (**12-Coin Feature-Build Budget**, [`skills/stingy-lite/SKILL.md`](./skills/stingy-lite/SKILL.md)) against a Default Baseline Agent on a **2,300-line Realtime Collaborative Whiteboard codebase** (`state-crdt.ts`, `canvas-engine.ts`, `ws-client.ts`), tasking both agents with implementing **Multi-Peer Conflict-Free CRDT Undo/Redo (`undo`, `redo`) + Spatial Dirty Bounding-Box Invalidation (`computeDirtyBounds`)**:
+
+* 🌐 **Try the Live Interactive CRDT Whiteboard Demo:** **[https://kuro0no.github.io/stingy/whiteboard-demo.html](https://kuro0no.github.io/stingy/whiteboard-demo.html)**
+* 📂 **Recorded Hardware Telemetry Transcripts:** [`live-whiteboard-baseline.jsonl`](./benchmarks/fixtures/live-whiteboard-baseline.jsonl) vs. [`live-whiteboard-stingy-lite.jsonl`](./benchmarks/fixtures/live-whiteboard-stingy-lite.jsonl)
+
+| Metric | Baseline Agent (No Stingy) | `/stingy-lite` Agent (12-Coin Feature Mode) | Delta / Savings |
+| :--- | ---: | ---: | ---: |
+| **Uncached Hardware Input Tokens** | `98,333 tok` | **`19,510 tok`** | **-80.2%** |
+| **Cached Input Tokens** | `250,256 tok` | **`31,963 tok`** | **-87.2%** |
+| **Output Tokens (Report Length)** | `4,516 tok` (`12,903 chars`) | **`2,024 tok` (`4,458 chars`)** | **-55.2% Output Tok (-65.5% Chars)** |
+| **Real API Cost (`$`)** | `$0.4378` | **`$0.0985`** | **-77.5% Cost Savings** |
+| **Coin Budget Score** | `16.0 / 12.0` (**OVER BUDGET**) | **`3.5 / 12.0 Coins`** (**PASS**) | **Within Budget** |
+
+---
+
+## ⌨️ Complete Stingy Command Reference (Slash Skills & CLI)
+
+### 1. In-Chat Agent Slash Commands (Skills)
+
+| Slash Command | Turn Budget | Best Used For | Key Rules Enforced |
+| :--- | :---: | :--- | :--- |
+| **`/stingy-lite`** (or `/stingy lite`) | **12.0 Coins** | **Feature building, UI scaffolding, multi-file refactors** | 1-shot `grep` (`0.5c`), surgical reads `≤ 120 lines` (`1.0c`), forbids `cat`/`Get-Content` shell bypasses, max 1 quiet verification check, concise output. |
+| **`/stingy`** (or `/stingy strict`) | **10.0 Coins** | **Daily coding, debugging, PR reviews (Default)** | Mandatory `grep` before reading files `> 150 lines`, `StartLine`/`EndLine ≤ 120 lines`, zero duplicate reads, `--silent` tests, 1-line Coin Receipt. |
+| **`/stingy scrooge`** | **8.0 Coins** | **Surgical bug hunts on massive monorepos** | Ultra-tight `60–70 line` reads, max 2 file reads per turn, diff-only code output, zero filler prose. |
+| **`/stingy-roast`** (or `/stingy roast`) | **Audit Mode** | **In-chat session token autopsy** | Runs the offline transcript analyzer and prints your ASCII Token Autopsy Receipt + Archetype diagnosis inside chat. |
+
+### 2. Terminal CLI Commands (`npx github:Kuro0No/stingy <cmd>`)
+
+| CLI Command | Description |
+| :--- | :--- |
+| `npx github:Kuro0No/stingy roast [path]` | Scans local transcripts (`~/.claude`, `~/.gemini`, `~/.codex`, `~/.copilot`, etc.) and prints the ASCII Token Autopsy Receipt. |
+| `npx github:Kuro0No/stingy roast --source <agent>` | Filters `roast` by agent (`claude`, `antigravity`, `codex`, `gemini`, `copilot`, `pi`, `openclaw`). |
+| `npx github:Kuro0No/stingy usage [source]` | Summarizes logged input/output/cache token bills across 18 agent sources via `ccusage`. |
+| `npx github:Kuro0No/stingy init [--mode lite\|strict\|scrooge]` | Installs `SKILL.md` into `.claude/skills/stingy/` and `.agents/skills/stingy/` in your current workspace. |
+| `npx github:Kuro0No/stingy audit` | Prints a JSON summary of your local transcript token & coin metrics for CI or scripts. |
+
+---
+
 ## 📊 Synthetic Trace & Prompt-Cache Model (`npm run benchmark`)
 
 How much does replacing unbounded full-file reads with `grep` + surgical line-range reads save once you account for fixed system prompts, the token cost of `SKILL.md` itself, and **Anthropic Prompt Caching**?

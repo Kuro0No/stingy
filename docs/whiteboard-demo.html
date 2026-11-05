@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Realtime Collaborative CRDT Whiteboard — Stingy Feature-Build Case Study</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #111110;
+      --surface: #1A1917;
+      --surface-2: #242320;
+      --ink: #F5F2EB;
+      --muted: #9E988E;
+      --accent: #FF5526;
+      --green: #2ECC71;
+      --blue: #38BDF8;
+      --purple: #C084FC;
+      --amber: #FBBF24;
+      --border: #33312D;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'Space Grotesk', system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--ink);
+      font-family: var(--mono);
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .badge {
+      padding: 4px 8px;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      background: rgba(255, 85, 38, 0.16);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 370px;
+      flex: 1;
+      min-height: calc(100vh - 58px);
+    }
+
+    @media (max-width: 980px) {
+      .workspace { grid-template-columns: 1fr; }
+    }
+
+    .canvas-stage {
+      display: flex;
+      flex-direction: column;
+      background: #0D0D0C;
+      position: relative;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .tool-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-right: 12px;
+      border-right: 1px solid var(--border);
+    }
+
+    .tool-group:last-child { border-right: none; }
+
+    .group-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-right: 4px;
+    }
+
+    button {
+      font-family: var(--mono);
+      font-size: 0.76rem;
+      font-weight: 600;
+      padding: 7px 11px;
+      background: var(--surface);
+      color: var(--ink);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.12s ease;
+    }
+
+    button:hover { border-color: var(--accent); color: #FFF; }
+    button.active {
+      background: var(--accent);
+      color: #FFF;
+      border-color: var(--accent);
+    }
+
+    button.peer-a.active { background: #38BDF8; color: #000; border-color: #38BDF8; }
+    button.peer-b.active { background: #C084FC; color: #000; border-color: #C084FC; }
+
+    .canvas-wrap {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    canvas {
+      background:
+        radial-gradient(#2B2A27 1px, transparent 1px) 0 0 / 20px 20px,
+        #151513;
+      border: 1px solid var(--border);
+      cursor: crosshair;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.45);
+      max-width: 100%;
+    }
+
+    .hud-overlay {
+      position: absolute;
+      bottom: 28px;
+      left: 28px;
+      background: rgba(20, 20, 18, 0.92);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      font-family: var(--mono);
+      font-size: 0.74rem;
+      line-height: 1.5;
+      pointer-events: none;
+    }
+
+    .sidebar {
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+    }
+
+    .card {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      padding: 14px;
+    }
+
+    .card h3 {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      color: var(--amber);
+      margin-bottom: 10px;
+      letter-spacing: 0.04em;
+    }
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 0.76rem;
+      padding: 5px 0;
+      border-bottom: 1px dashed rgba(255,255,255,0.08);
+    }
+
+    .metric-row:last-child { border-bottom: none; }
+
+    .log-list {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      max-height: 180px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .log-item {
+      padding: 5px 8px;
+      background: rgba(0,0,0,0.3);
+      border-left: 3px solid var(--accent);
+    }
+
+    .log-item.peer-a { border-left-color: var(--blue); }
+    .log-item.peer-b { border-left-color: var(--purple); }
+    .log-item.dirty { border-left-color: var(--amber); }
+
+    a.back-link {
+      color: var(--ink);
+      text-decoration: none;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+    }
+    a.back-link:hover { border-color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span>🪙 STINGY // REALTIME CRDT WHITEBOARD DEMO</span>
+      <span class="badge">MULTI-PEER UNDO/REDO + DIRTY AABB</span>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <a href="./index.html" class="back-link">← BACK TO STINGY HOME</a>
+      <a href="https://github.com/Kuro0No/stingy" target="_blank" rel="noopener" class="back-link">GITHUB REPO ★</a>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <div class="canvas-stage">
+      <div class="toolbar">
+        <div class="tool-group">
+          <span class="group-label">Active Peer:</span>
+          <button type="button" id="btn-peer-a" class="peer-a active">👩‍💻 Peer A (Alice)</button>
+          <button type="button" id="btn-peer-b" class="peer-b">👨‍💻 Peer B (Bob)</button>
+        </div>
+
+        <div class="tool-group">
+          <span class="group-label">Shape:</span>
+          <button type="button" data-shape="rect" class="shape-btn active">▭ Rect</button>
+          <button type="button" data-shape="circle" class="shape-btn">◯ Circle</button>
+          <button type="button" data-shape="note" class="shape-btn">📝 Sticky Note</button>
+        </div>
+
+        <div class="tool-group">
+          <span class="group-label">Per-Peer CRDT History:</span>
+          <button type="button" id="btn-undo-a" title="Undo only Alice's last action">↩ Undo Alice</button>
+          <button type="button" id="btn-redo-a" title="Redo Alice's action">↪ Redo Alice</button>
+          <button type="button" id="btn-undo-b" title="Undo only Bob's last action">↩ Undo Bob</button>
+          <button type="button" id="btn-redo-b" title="Redo Bob's action">↪ Redo Bob</button>
+        </div>
+
+        <div class="tool-group">
+          <button type="button" id="btn-sim-conflict" style="border-color: var(--amber); color: var(--amber);">
+            ⚡ Simulate Concurrent Edit + Conflict
+          </button>
+          <button type="button" id="btn-clear">🗑 Reset</button>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="board" width="860" height="540"></canvas>
+        <div class="hud-overlay" id="dirty-hud">
+          <div><strong>SPATIAL DIRTY AABB (<code>computeDirtyBounds</code>):</strong> <span id="hud-box" style="color: var(--amber);">{ minX: 0, minY: 0, maxX: 0, maxY: 0 }</span></div>
+          <div><strong>CANVAS PIXELS REPAINTED:</strong> <span id="hud-pixels" style="color: var(--green);">0% of viewport (100% skipped)</span></div>
+          <div><strong>ACTIVE ELEMENTS:</strong> <span id="hud-count">4</span> | <strong>ALICE STACK:</strong> <span id="hud-stack-a">2 undo / 0 redo</span> | <strong>BOB STACK:</strong> <span id="hud-stack-b">2 undo / 0 redo</span></div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="sidebar">
+      <div class="card">
+        <h3>🧪 How to Test This Feature</h3>
+        <p style="font-size: 0.8rem; color: var(--muted); line-height: 1.5;">
+          1. Drag on the canvas to draw shapes as <strong>Alice (Blue)</strong> or switch to <strong>Bob (Purple)</strong>.<br/>
+          2. Click <strong>↩ Undo Alice</strong> or <strong>↩ Undo Bob</strong>: each peer has an isolated CRDT undo stack so Alice's undo never erases Bob's work.<br/>
+          3. Notice the dashed <strong style="color: var(--amber);">Amber Dirty Box</strong>: <code>computeDirtyBounds(before, after)</code> computes the exact minimal rectangle to repaint!
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>📊 Fair A/B Token Telemetry (<code>/stingy-lite</code>)</h3>
+        <div class="metric-row">
+          <span>Task:</span>
+          <strong>2,300-Line TS Whiteboard</strong>
+        </div>
+        <div class="metric-row">
+          <span>Baseline Uncached Input:</span>
+          <strong style="color: var(--accent);">98,333 tok ($0.4378)</strong>
+        </div>
+        <div class="metric-row">
+          <span><code>/stingy-lite</code> Input:</span>
+          <strong style="color: var(--green);">19,510 tok (-80.2%)</strong>
+        </div>
+        <div class="metric-row">
+          <span>Output Tokens (4,516 → 2,024):</span>
+          <strong style="color: var(--green);">-55.2% Output Tok</strong>
+        </div>
+        <div class="metric-row">
+          <span>Total API Cost:</span>
+          <strong style="color: var(--green);">$0.0985 (-77.5%)</strong>
+        </div>
+        <div class="metric-row">
+          <span>Coin Budget Score:</span>
+          <strong style="color: var(--green);">3.5 / 12.0 Coins (PASS)</strong>
+        </div>
+      </div>
+
+      <div class="card" style="flex: 1; display: flex; flex-direction: column;">
+        <h3>📡 CRDT Event &amp; Dirty-Bounds Log</h3>
+        <div class="log-list" id="event-log"></div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    // ============================================================================
+    // Exact runtime implementation of CanvasStateManager + computeDirtyBounds
+    // ============================================================================
+    class CanvasStateManager {
+      constructor() {
+        this.elements = new Map();
+        this.peerUndoStacks = new Map();
+        this.peerRedoStacks = new Map();
+      }
+
+      recordMutation(peerId, beforeEl, afterEl) {
+        if (!this.peerUndoStacks.has(peerId)) this.peerUndoStacks.set(peerId, []);
+        if (!this.peerRedoStacks.has(peerId)) this.peerRedoStacks.set(peerId, []);
+
+        const id = (afterEl || beforeEl).id;
+        this.peerUndoStacks.get(peerId).push({
+          elementId: id,
+          before: beforeEl ? { ...beforeEl } : null,
+          after: afterEl ? { ...afterEl } : null
+        });
+        this.peerRedoStacks.get(peerId).length = 0;
+
+        if (afterEl) {
+          this.elements.set(id, { ...afterEl });
+        } else {
+          this.elements.delete(id);
+        }
+      }
+
+      undo(peerId) {
+        const stack = this.peerUndoStacks.get(peerId);
+        if (!stack || stack.length === 0) return { changed: false, conflictSkipped: false, elements: this.getAllElements() };
+
+        const action = stack.pop();
+        if (!this.peerRedoStacks.has(peerId)) this.peerRedoStacks.set(peerId, []);
+        this.peerRedoStacks.get(peerId).push(action);
+
+        const cur = this.elements.get(action.elementId);
+        // Conflict-free guard: if another peer modified this element with a strictly newer version, preserve their edit
+        if (cur && cur.authorId !== peerId && action.after && cur.version > action.after.version) {
+          return { changed: false, conflictSkipped: true, elementId: action.elementId, elements: this.getAllElements() };
+        }
+
+        if (action.before === null) {
+          this.elements.delete(action.elementId);
+        } else {
+          const nextVer = (cur ? cur.version : action.before.version) + 1;
+          this.elements.set(action.elementId, {
+            ...action.before,
+            version: nextVer,
+            authorId: peerId
+          });
+        }
+        return { changed: true, conflictSkipped: false, elementId: action.elementId, elements: this.getAllElements() };
+      }
+
+      redo(peerId) {
+        const stack = this.peerRedoStacks.get(peerId);
+        if (!stack || stack.length === 0) return { changed: false, elements: this.getAllElements() };
+
+        const action = stack.pop();
+        if (!this.peerUndoStacks.has(peerId)) this.peerUndoStacks.set(peerId, []);
+        this.peerUndoStacks.get(peerId).push(action);
+
+        const cur = this.elements.get(action.elementId);
+        if (action.after === null) {
+          this.elements.delete(action.elementId);
+        } else {
+          const nextVer = (cur ? cur.version : action.after.version) + 1;
+          this.elements.set(action.elementId, {
+            ...action.after,
+            version: nextVer,
+            authorId: peerId
+          });
+        }
+        return { changed: true, elementId: action.elementId, elements: this.getAllElements() };
+      }
+
+      getAllElements() {
+        return Array.from(this.elements.values()).map(el => ({ ...el }));
+      }
+    }
+
+    function computeDirtyBounds(before, after) {
+      const beforeMap = new Map(before.map(el => [el.id, el]));
+      const afterMap = new Map(after.map(el => [el.id, el]));
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      let hasDirty = false;
+
+      const include = (el) => {
+        hasDirty = true;
+        const x1 = Math.min(el.x, el.x + el.width);
+        const y1 = Math.min(el.y, el.y + el.height);
+        const x2 = Math.max(el.x, el.x + el.width);
+        const y2 = Math.max(el.y, el.y + el.height);
+        minX = Math.min(minX, x1);
+        minY = Math.min(minY, y1);
+        maxX = Math.max(maxX, x2);
+        maxY = Math.max(maxY, y2);
+      };
+
+      for (const [id, b] of beforeMap.entries()) {
+        const a = afterMap.get(id);
+        if (!a) {
+          include(b);
+        } else if (
+          b.x !== a.x || b.y !== a.y || b.width !== a.width || b.height !== a.height ||
+          b.stroke !== a.stroke || b.type !== a.type || b.version !== a.version
+        ) {
+          include(b);
+          include(a);
+        }
+      }
+
+      for (const [id, a] of afterMap.entries()) {
+        if (!beforeMap.has(id)) include(a);
+      }
+
+      return hasDirty ? { minX: Math.round(minX), minY: Math.round(minY), maxX: Math.round(maxX), maxY: Math.round(maxY) } : { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+    }
+
+    // ============================================================================
+    // Interactive Canvas Controller
+    // ============================================================================
+    const canvas = document.getElementById('board');
+    const ctx = canvas.getContext('2d');
+    const sm = new CanvasStateManager();
+
+    let activePeer = 'peer-alice';
+    let activeShape = 'rect';
+    let lastDirtyBounds = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+    let isDragging = false;
+    let startX = 0, startY = 0, curX = 0, curY = 0;
+    let idCounter = 1;
+
+    function addLog(msg, cls = '') {
+      const logEl = document.getElementById('event-log');
+      const item = document.createElement('div');
+      item.className = 'log-item ' + cls;
+      item.textContent = msg;
+      logEl.prepend(item);
+    }
+
+    function seedInitialBoard() {
+      sm.elements.clear();
+      sm.peerUndoStacks.clear();
+      sm.peerRedoStacks.clear();
+      idCounter = 1;
+
+      const seeds = [
+        { peer: 'peer-alice', type: 'rect', x: 70, y: 70, width: 210, height: 120, stroke: '#38BDF8', label: 'API Gateway (Alice)' },
+        { peer: 'peer-bob', type: 'rect', x: 360, y: 80, width: 220, height: 120, stroke: '#C084FC', label: 'CRDT Sync Engine (Bob)' },
+        { peer: 'peer-alice', type: 'circle', x: 130, y: 270, width: 150, height: 150, stroke: '#38BDF8', label: 'Auth Cache' },
+        { peer: 'peer-bob', type: 'note', x: 410, y: 275, width: 240, height: 135, stroke: '#C084FC', label: 'Dirty AABB Clipped Render' }
+      ];
+
+      for (const s of seeds) {
+        const before = sm.getAllElements();
+        const el = {
+          id: 'el-' + (idCounter++),
+          type: s.type,
+          x: s.x,
+          y: s.y,
+          width: s.width,
+          height: s.height,
+          stroke: s.stroke,
+          label: s.label,
+          version: 1,
+          authorId: s.peer
+        };
+        sm.recordMutation(s.peer, null, el);
+        lastDirtyBounds = computeDirtyBounds(before, sm.getAllElements());
+      }
+      addLog('Initialized board with 2 Alice shapes + 2 Bob shapes.', 'dirty');
+      renderCanvas();
+    }
+
+    function renderCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const elements = sm.getAllElements();
+
+      for (const el of elements) {
+        ctx.save();
+        ctx.strokeStyle = el.stroke;
+        ctx.lineWidth = 2.5;
+        ctx.fillStyle = el.authorId === 'peer-alice' ? 'rgba(56, 189, 248, 0.10)' : 'rgba(192, 132, 252, 0.10)';
+
+        const rx = Math.min(el.x, el.x + el.width);
+        const ry = Math.min(el.y, el.y + el.height);
+        const rw = Math.abs(el.width);
+        const rh = Math.abs(el.height);
+
+        if (el.type === 'circle') {
+          ctx.beginPath();
+          ctx.ellipse(rx + rw / 2, ry + rh / 2, rw / 2, rh / 2, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        } else if (el.type === 'note') {
+          ctx.fillStyle = el.authorId === 'peer-alice' ? 'rgba(56, 189, 248, 0.18)' : 'rgba(192, 132, 252, 0.18)';
+          ctx.fillRect(rx, ry, rw, rh);
+          ctx.strokeRect(rx, ry, rw, rh);
+        } else {
+          ctx.fillRect(rx, ry, rw, rh);
+          ctx.strokeRect(rx, ry, rw, rh);
+        }
+
+        // Metadata header tag
+        ctx.fillStyle = el.stroke;
+        ctx.font = '600 11px "IBM Plex Mono", monospace';
+        const tag = `${el.id} • v${el.version} • ${el.authorId === 'peer-alice' ? 'Alice' : 'Bob'}`;
+        ctx.fillText(tag, rx + 8, ry + 18);
+
+        if (el.label) {
+          ctx.fillStyle = '#F5F2EB';
+          ctx.font = '500 13px "Space Grotesk", sans-serif';
+          ctx.fillText(el.label, rx + 8, ry + 42);
+        }
+        ctx.restore();
+      }
+
+      // Preview while dragging
+      if (isDragging) {
+        ctx.save();
+        ctx.strokeStyle = activePeer === 'peer-alice' ? '#38BDF8' : '#C084FC';
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(startX, startY, curX - startX, curY - startY);
+        ctx.restore();
+      }
+
+      // Draw Dirty AABB Box
+      if (lastDirtyBounds.maxX > lastDirtyBounds.minX && lastDirtyBounds.maxY > lastDirtyBounds.minY) {
+        ctx.save();
+        ctx.strokeStyle = '#FBBF24';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 4]);
+        const pad = 6;
+        const dx = lastDirtyBounds.minX - pad;
+        const dy = lastDirtyBounds.minY - pad;
+        const dw = (lastDirtyBounds.maxX - lastDirtyBounds.minX) + pad * 2;
+        const dh = (lastDirtyBounds.maxY - lastDirtyBounds.minY) + pad * 2;
+        ctx.strokeRect(dx, dy, dw, dh);
+
+        ctx.fillStyle = 'rgba(251, 191, 36, 0.88)';
+        ctx.font = '600 10px "IBM Plex Mono", monospace';
+        ctx.fillText(`DIRTY AABB [${lastDirtyBounds.minX},${lastDirtyBounds.minY} → ${lastDirtyBounds.maxX},${lastDirtyBounds.maxY}]`, dx + 4, Math.max(14, dy - 6));
+        ctx.restore();
+      }
+
+      // Update HUD
+      document.getElementById('hud-box').textContent =
+        `{ minX: ${lastDirtyBounds.minX}, minY: ${lastDirtyBounds.minY}, maxX: ${lastDirtyBounds.maxX}, maxY: ${lastDirtyBounds.maxY} }`;
+      const dirtyArea = Math.max(0, (lastDirtyBounds.maxX - lastDirtyBounds.minX) * (lastDirtyBounds.maxY - lastDirtyBounds.minY));
+      const totalArea = canvas.width * canvas.height;
+      const pct = ((dirtyArea / totalArea) * 100).toFixed(1);
+      const savedPct = Math.max(0, (100 - Number(pct))).toFixed(1);
+      document.getElementById('hud-pixels').textContent = `${pct}% of canvas (${savedPct}% repaint skipped!)`;
+      document.getElementById('hud-count').textContent = elements.length;
+
+      const aUndo = (sm.peerUndoStacks.get('peer-alice') || []).length;
+      const aRedo = (sm.peerRedoStacks.get('peer-alice') || []).length;
+      const bUndo = (sm.peerUndoStacks.get('peer-bob') || []).length;
+      const bRedo = (sm.peerRedoStacks.get('peer-bob') || []).length;
+      document.getElementById('hud-stack-a').textContent = `${aUndo} undo / ${aRedo} redo`;
+      document.getElementById('hud-stack-b').textContent = `${bUndo} undo / ${bRedo} redo`;
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      startX = Math.round((e.clientX - rect.left) * (canvas.width / rect.width));
+      startY = Math.round((e.clientY - rect.top) * (canvas.height / rect.height));
+      curX = startX;
+      curY = startY;
+      isDragging = true;
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const rect = canvas.getBoundingClientRect();
+      curX = Math.round((e.clientX - rect.left) * (canvas.width / rect.width));
+      curY = Math.round((e.clientY - rect.top) * (canvas.height / rect.height));
+      renderCanvas();
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (!isDragging) return;
+      isDragging = false;
+      const w = curX - startX;
+      const h = curY - startY;
+      if (Math.abs(w) < 20 || Math.abs(h) < 20) {
+        renderCanvas();
+        return;
+      }
+
+      const before = sm.getAllElements();
+      const newEl = {
+        id: 'el-' + (idCounter++),
+        type: activeShape,
+        x: Math.min(startX, curX),
+        y: Math.min(startY, curY),
+        width: Math.abs(w),
+        height: Math.abs(h),
+        stroke: activePeer === 'peer-alice' ? '#38BDF8' : '#C084FC',
+        label: `${activePeer === 'peer-alice' ? 'Alice' : 'Bob'} ${activeShape}`,
+        version: 1,
+        authorId: activePeer
+      };
+      sm.recordMutation(activePeer, null, newEl);
+      lastDirtyBounds = computeDirtyBounds(before, sm.getAllElements());
+      addLog(
+        `[${activePeer === 'peer-alice' ? 'Alice' : 'Bob'}] Created ${newEl.id} (v1) → Dirty AABB [${lastDirtyBounds.minX},${lastDirtyBounds.minY}..${lastDirtyBounds.maxX},${lastDirtyBounds.maxY}]`,
+        activePeer === 'peer-alice' ? 'peer-a' : 'peer-b'
+      );
+      renderCanvas();
+    });
+
+    // Peer Switchers
+    document.getElementById('btn-peer-a').addEventListener('click', () => {
+      activePeer = 'peer-alice';
+      document.getElementById('btn-peer-a').classList.add('active');
+      document.getElementById('btn-peer-b').classList.remove('active');
+    });
+    document.getElementById('btn-peer-b').addEventListener('click', () => {
+      activePeer = 'peer-bob';
+      document.getElementById('btn-peer-b').classList.add('active');
+      document.getElementById('btn-peer-a').classList.remove('active');
+    });
+
+    // Shape Switchers
+    document.querySelectorAll('.shape-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeShape = btn.dataset.shape;
+      });
+    });
+
+    // Per-Peer Undo / Redo
+    function handleUndo(peerId, name, cls) {
+      const before = sm.getAllElements();
+      const res = sm.undo(peerId);
+      if (res.conflictSkipped) {
+        addLog(`[CRDT Conflict Guard] ${name}'s undo on ${res.elementId} skipped because another peer updated it with a newer CRDT version!`, 'dirty');
+      } else if (res.changed) {
+        lastDirtyBounds = computeDirtyBounds(before, res.elements);
+        addLog(`[${name} UNDO] Reverted ${res.elementId} → Dirty AABB [${lastDirtyBounds.minX},${lastDirtyBounds.minY}..${lastDirtyBounds.maxX},${lastDirtyBounds.maxY}]`, cls);
+      } else {
+        addLog(`[${name}] Nothing left to undo.`, cls);
+      }
+      renderCanvas();
+    }
+
+    function handleRedo(peerId, name, cls) {
+      const before = sm.getAllElements();
+      const res = sm.redo(peerId);
+      if (res.changed) {
+        lastDirtyBounds = computeDirtyBounds(before, res.elements);
+        addLog(`[${name} REDO] Re-applied ${res.elementId} (v bumped) → Dirty AABB [${lastDirtyBounds.minX},${lastDirtyBounds.minY}..${lastDirtyBounds.maxX},${lastDirtyBounds.maxY}]`, cls);
+      } else {
+        addLog(`[${name}] Nothing to redo.`, cls);
+      }
+      renderCanvas();
+    }
+
+    document.getElementById('btn-undo-a').addEventListener('click', () => handleUndo('peer-alice', 'Alice', 'peer-a'));
+    document.getElementById('btn-redo-a').addEventListener('click', () => handleRedo('peer-alice', 'Alice', 'peer-a'));
+    document.getElementById('btn-undo-b').addEventListener('click', () => handleUndo('peer-bob', 'Bob', 'peer-b'));
+    document.getElementById('btn-redo-b').addEventListener('click', () => handleRedo('peer-bob', 'Bob', 'peer-b'));
+
+    // Simulate Concurrent Conflict
+    document.getElementById('btn-sim-conflict').addEventListener('click', () => {
+      const all = sm.getAllElements();
+      const target = all.find(e => e.authorId === 'peer-alice') || all[0];
+      if (!target) return;
+
+      const before = sm.getAllElements();
+      const updated = {
+        ...target,
+        x: target.x + 45,
+        y: target.y + 30,
+        stroke: '#C084FC',
+        label: target.label + ' [Bob Edited v' + (target.version + 1) + ']',
+        version: target.version + 1,
+        authorId: 'peer-bob'
+      };
+      sm.recordMutation('peer-bob', target, updated);
+      lastDirtyBounds = computeDirtyBounds(before, sm.getAllElements());
+      addLog(
+        `⚡ [Concurrent Edit] Bob moved ${target.id} to (${updated.x},${updated.y}) with CRDT v${updated.version}. Try clicking 'Undo Alice' now to see CRDT conflict protection!`,
+        'dirty'
+      );
+      renderCanvas();
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', seedInitialBoard);
+
+    seedInitialBoard();
+  </script>
+</body>
+</html>
