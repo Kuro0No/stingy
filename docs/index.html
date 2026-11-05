@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🪙 STINGY — Cut 80% Input & Tool-Call Token Waste for AI Coding Agents</title>
+  <title>🪙 STINGY — A 10-Coin Tool Budget for AI Coding Agents</title>
   <meta name="description" content="Caveman saves output prose. Ponytail saves output code. Stingy saves the 85% of your AI bill burned on input context & reckless tool calls." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -455,7 +455,7 @@
           </h1>
           <p class="hero__sub">
             <strong>Caveman</strong> compresses output prose. <strong>Ponytail</strong> compresses output code.
-            <strong>Stingy</strong> locks down the <strong>~80% of your AI bill</strong> wasted on full-file reads, duplicate re-reads, and blind command retry loops.
+            <strong>Stingy</strong> gives your agent <strong>10 coins per turn</strong> to spend on tools. Roast local sessions to see what full-file reads, duplicate reads, and blind retries cost in coins.
           </p>
 
           <div class="cmd-box">
@@ -602,7 +602,7 @@
 2. Read at most 120 lines around the target (1.0 Coin). Never read whole files >250 lines (4.0 Coins).
 3. Never re-read a file already in context (5.0 Coins penalty).
 4. Append a 1-line receipt at the end of every reply:
-   🪙 [STINGY: X/10 Coins | Saved ~Yk input tokens ($Z)]</code></pre>
+   🪙 [STINGY: X/10 Coins | Searches and bounded reads used]</code></pre>
 
             <button type="button" class="btn" style="width: 100%; margin-top: 14px;" id="copy-skill-btn">
               COPY SKILL TO CLIPBOARD (CLAUDE.MD / SKILL.MD)
@@ -711,18 +711,19 @@
       lite: `# 🪙 Stingy Mode (LITE) — Surgical Engineer
 1. Always grep for symbol & line numbers BEFORE calling read_file.
 2. Read at most 120 lines around the target symbol (StartLine/EndLine).
-3. Batch independent tool calls in a single turn to avoid re-billing history.`,
+3. Batch independent tool calls to reduce model round-trips.`,
       strict: `# 🪙 Stingy Mode (STRICT) — 10-Coin Per-Turn Budget
 1. Always grep for exact symbol & line numbers BEFORE reading a file (0.5 Coins).
 2. Read at most 120 lines around the target (1.0 Coin). Never read whole files >250 lines (4.0 Coins).
 3. Never re-read a file already in context (5.0 Coins penalty).
 4. Append a 1-line receipt at the end of every reply:
-   🪙 [STINGY: X/10 Coins | Saved ~Yk input tokens ($Z)]`,
+   🪙 [STINGY: X/10 Coins | Searches and bounded reads used]`,
       scrooge: `# 🪙 Stingy Mode (SCROOGE) — Maximum Miser (Pairs with Caveman & Ponytail)
 1. Zero speculative tool calls: if context is already visible, make 0 tool calls.
 2. Surgical reads only (<=80 lines after grep). Never touch lockfiles or dist/.
 3. One-shot edits: plan the complete patch before editing; blind retries cost 4.0 Coins.
-4. End every reply with: 🪙 [SCROOGE: X/10 Coins | Est. saved: $Y | UNDER BUDGET 🏆]`
+4. End each reply with a receipt based on observed tool calls.
+   🪙 [SCROOGE: X/10 Coins | Searches and bounded reads used]`
     };
 
     const modeTabs = document.querySelectorAll('.mode-tab');

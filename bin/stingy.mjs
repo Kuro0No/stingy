@@ -4,15 +4,21 @@
  * 🪙 STINGY CLI — Input Token & Tool-Call Auditor for AI Coding Agents
  * Commands:
  *   stingy roast [path]    -> Audit local JSONL transcripts & print a Token Autopsy Receipt
+ *   stingy usage [agent]   -> Summarize agent tokens and estimated cost via ccusage
  *   stingy audit [dir]     -> Find high-token files ("Token Black Holes") & generate .claudeignore
  *   stingy init [--mode]   -> Install Stingy Mode into .agents/skills, CLAUDE.md, or .cursorrules
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { analyzeJsonlLines } from '../src/core.mjs';
+import { findLocalLogs, readTranscript, ROAST_SOURCES } from '../src/transcripts.mjs';
+import { readUsageReport, USAGE_SOURCES } from '../src/usage.mjs';
+
+export { findLocalLogs };
+
+const INPUT_USD_PER_MILLION_TOKENS = 3;
 
 const C = {
   reset: '\x1b[0m',
@@ -38,99 +44,132 @@ function padLeft(str, len) {
   return s.length >= len ? s.slice(0, len) : ' '.repeat(len - s.length) + s;
 }
 
-function formatUsd(val, decimals = 2) {
-  const n = Number(val || 0);
-  if (n === 0) return decimals === 4 ? '$0.0000' : '$0.00';
-  return `$${n.toFixed(decimals)}`;
+function formatReceiptCosts(stats) {
+  const costsInMicros = [
+    stats.readWastedTokens,
+    stats.dupReadWastedTokens,
+    stats.retryWastedTokens,
+    stats.rageWastedTokens,
+    stats.totalTokens,
+    stats.stingyTokens,
+    stats.wastedTokens
+  ].map((tokens) => tokens * INPUT_USD_PER_MILLION_TOKENS);
+
+  const baselineMicros = stats.totalTokens * INPUT_USD_PER_MILLION_TOKENS;
+  const hasSubCentCost = costsInMicros.some((micros) => micros > 0 && micros < 5_000);
+  let decimals = (baselineMicros > 0 && baselineMicros < 50_000) || hasSubCentCost ? 4 : 2;
+  const roundCosts = (places) =>
+    costsInMicros.map((micros) => Math.round(micros / 10 ** (6 - places)));
+  let rounded = roundCosts(decimals);
+
+  // Increase precision whenever rounding would make the receipt totals disagree.
+  while (decimals < 6) {
+    const [read, duplicate, retry, rage, baseline, remaining, waste] = rounded;
+    if (read + duplicate + retry + rage === waste && remaining + waste === baseline) break;
+    decimals += 2;
+    rounded = roundCosts(decimals);
+  }
+
+  const formatUsd = (units) => `$${(units / 10 ** decimals).toFixed(decimals)}`;
+  const [fullReadUsd, dupReadUsd, retryUsd, rageUsd, rawUsd, stingyUsd, wastedUsd] =
+    rounded.map(formatUsd);
+  return {
+    fullReadUsd, dupReadUsd, retryUsd, rageUsd, rawUsd, stingyUsd, wastedUsd, zeroUsd: formatUsd(0)
+  };
 }
 
-/**
- * Discover JSONL session logs from an explicit path or default HOME locations.
- * Respects process.env.HOME / process.env.USERPROFILE for isolated testing.
- */
-export function findLocalLogs(customTarget = null) {
-  const jsonlFiles = [];
-
-  function walk(dir, depth = 0) {
-    if (depth > 5 || !fs.existsSync(dir)) return;
-    let entries = [];
-    try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return;
+function reportArguments(allowed) {
+  const options = {};
+  for (let i = 1; i < args.length; i++) {
+    const arg = args[i];
+    if (!arg.startsWith('-')) {
+      if (options.target !== undefined) throw new Error('Expected a single path or agent.');
+      options.target = arg;
+      continue;
     }
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        walk(fullPath, depth + 1);
-      } else if (
-        entry.isFile() &&
-        entry.name.endsWith('.jsonl') &&
-        !entry.name.includes('transcript_full')
-      ) {
-        try {
-          const stat = fs.statSync(fullPath);
-          if (stat.size > 0) {
-            jsonlFiles.push({ path: fullPath, size: stat.size, mtime: stat.mtimeMs });
-          }
-        } catch {
-          // ignore unreadable file
-        }
-      }
+    if (!Object.hasOwn(allowed, arg)) throw new Error(`Unknown option ${arg}.`);
+    const key = arg.slice(2);
+    if (allowed[arg] === 'flag') {
+      options[key] = true;
+    } else {
+      const value = args[++i];
+      if (!value || value.startsWith('--')) throw new Error(`${arg} requires a value.`);
+      options[key] = value;
     }
   }
+  return options;
+}
 
-  if (customTarget && !customTarget.startsWith('-')) {
-    const resolved = path.resolve(process.cwd(), customTarget);
-    if (fs.existsSync(resolved)) {
-      const stat = fs.statSync(resolved);
-      if (stat.isFile()) {
-        return [{ path: resolved, size: stat.size, mtime: stat.mtimeMs }];
-      }
-      walk(resolved, 0);
-      return jsonlFiles.sort((a, b) => b.mtime - a.mtime).slice(0, 50);
-    }
-    return [];
+function runUsage() {
+  const { target, source, from, json } = reportArguments({ '--source': 'value', '--from': 'value', '--json': 'flag' });
+  if (target && source) throw new Error('Specify the agent as a positional argument or with --source.');
+  const report = readUsageReport({ source: source ?? target, from });
+  if (json) {
+    console.log(JSON.stringify(report, null, 2));
+    return;
+  }
+  if (report.agents.length === 0) {
+    console.log('No usage sessions found.');
+    return;
   }
 
-  const home = process.env.HOME || process.env.USERPROFILE || os.homedir();
-  const candidates = [
-    path.join(home, '.claude', 'projects'),
-    path.join(home, '.gemini', 'antigravity', 'brain')
-  ];
-
-  for (const dir of candidates) {
-    walk(dir);
+  const number = (value) => value.toLocaleString('en-US');
+  const line = (text) => `  | ${text.padEnd(45)} |`;
+  const row = (agent, sessions, tokens, cost) =>
+    line(`${padRight(agent, 12)} ${sessions.padStart(8)} ${tokens.padStart(11)} ${cost.padStart(11)}`);
+  const printAgent = (agent, usage) => {
+    const cost = usage.unpricedSessions === usage.sessions
+      ? 'unpriced'
+      : `$${usage.estimatedCostUsd.toFixed(6)}${usage.unpricedSessions ? '*' : ''}`;
+    console.log(row(agent, number(usage.sessions), number(usage.totalTokens), cost));
+  };
+  const divider = '  |-----------------------------------------------|';
+  const border = '  =================================================';
+  console.log(`${C.yellow}${C.bold}${border}${C.reset}`);
+  console.log(line('          🪙 STINGY USAGE RECEIPT 🪙'));
+  console.log(divider);
+  console.log(row('AGENT', 'SESSIONS', 'TOKENS', 'EST. USD'));
+  for (const agent of report.agents) printAgent(agent.agent, agent);
+  console.log(divider);
+  printAgent('TOTAL', report.totals);
+  console.log(line(`Input ${number(report.totals.inputTokens)}  /  Output ${number(report.totals.outputTokens)}`));
+  console.log(line(`Cache write ${number(report.totals.cacheCreationTokens)}  /  Cache read ${number(report.totals.cacheReadTokens)}`));
+  console.log(border);
+  if (report.totals.unpricedSessions > 0) {
+    console.log(`  Sessions without a price: ${number(report.totals.unpricedSessions)}`);
   }
-
-  return jsonlFiles.sort((a, b) => b.mtime - a.mtime).slice(0, 25);
+  console.log('  Usage data from ccusage. Costs are estimates.');
 }
 
 /**
  * Run the Honest Token Autopsy Receipt on real JSONL transcripts.
  */
 function runRoast() {
-  const customPath = args[1] && !args[1].startsWith('-') ? args[1] : null;
+  const { target: customPath, source } = reportArguments({ '--source': 'value' });
+  if (source && !ROAST_SOURCES.includes(source)) {
+    const usageHint = USAGE_SOURCES.includes(source) ? ` For usage totals, run stingy usage ${source}.` : '';
+    throw new Error(`Transcript sources are ${ROAST_SOURCES.join(', ')}.${usageHint}`);
+  }
   if (customPath && !fs.existsSync(path.resolve(process.cwd(), customPath))) {
     console.log('');
     console.log(`${C.red}Path not found: ${customPath}${C.reset}`);
     console.log(
-      `${C.dim}Usage: stingy roast [path-to-session.jsonl | path-to-logs-dir]${C.reset}`
+      `${C.dim}Usage: stingy roast [path] [--source agent]${C.reset}`
     );
     console.log('');
     return;
   }
 
-  const files = findLocalLogs(customPath);
+  const files = findLocalLogs(customPath, source);
 
   if (files.length === 0) {
     console.log('');
     console.log(`${C.yellow}No local JSONL session transcripts found.${C.reset}`);
     console.log(
-      `${C.dim}Searched in: ~/.claude/projects and ~/.gemini/antigravity/brain${C.reset}`
+      `${C.dim}Sources: ${source ?? ROAST_SOURCES.join(', ')}${C.reset}`
     );
     console.log(
-      `${C.dim}Usage: stingy roast [path-to-session.jsonl | path-to-logs-dir]${C.reset}`
+      `${C.dim}Usage: stingy roast [path] [--source agent]${C.reset}`
     );
     console.log('');
     return;
@@ -139,8 +178,7 @@ function runRoast() {
   const sessionList = [];
   for (const f of files) {
     try {
-      const content = fs.readFileSync(f.path, 'utf8');
-      const lines = content.split(/\r?\n/).filter((l) => l.trim());
+      const lines = readTranscript(f);
       if (lines.length > 0) {
         sessionList.push(lines);
       }
@@ -149,11 +187,11 @@ function runRoast() {
     }
   }
 
-  const s = analyzeJsonlLines(sessionList, 3.0);
+  const s = analyzeJsonlLines(sessionList, INPUT_USD_PER_MILLION_TOKENS);
 
-  if (s.totalSteps === 0) {
+  if (s.totalTurnsScored === 0) {
     console.log('');
-    console.log(`${C.yellow}No valid JSONL transcript records found in scanned files.${C.reset}`);
+    console.log(`${C.yellow}No auditable transcript records found in scanned files.${C.reset}`);
     console.log('');
     return;
   }
@@ -173,23 +211,12 @@ function runRoast() {
     diagnosis = 'DISCIPLINED CODER (Low Context Waste)';
   }
 
-  const fullReadUsd = s.fullReadUsd;
-  const dupReadUsd = s.dupReadUsd;
-  const retryUsd = s.retryUsd;
-  const rageUsd = s.rageUsd;
-  const hasSubCentItem = [fullReadUsd, dupReadUsd, retryUsd, rageUsd, s.wastedUsd].some(
-    (v) => v > 0 && v < 0.005
-  );
-  const decimals = (s.rawCostUsd > 0 && s.rawCostUsd < 0.05) || hasSubCentItem ? 4 : 2;
-  const zeroStr = formatUsd(0, decimals);
-
-  const rFull = Number(fullReadUsd.toFixed(decimals));
-  const rDup = Number(dupReadUsd.toFixed(decimals));
-  const rRetry = Number(retryUsd.toFixed(decimals));
-  const rRage = Number(rageUsd.toFixed(decimals));
-  const rWasted = Number((rFull + rDup + rRetry + rRage).toFixed(decimals));
-  const rRaw = Number(Math.max(rWasted, Number(s.rawCostUsd.toFixed(decimals))).toFixed(decimals));
-  const rStingy = Number(Math.max(0, rRaw - rWasted).toFixed(decimals));
+  const { fullReadUsd, dupReadUsd, retryUsd, rageUsd, rawUsd, stingyUsd, wastedUsd, zeroUsd } =
+    formatReceiptCosts(s);
+  const readWasteCount = s.fullFileReads + s.mediumReads + s.forbiddenReads;
+  const readWasteLabel = s.mediumReads || s.forbiddenReads
+    ? 'Full/Medium/Forbidden Reads'
+    : 'Full-File Reads (No Range)';
 
   console.log('');
   console.log(`${C.yellow}${C.bold}  =================================================${C.reset}`);
@@ -197,28 +224,28 @@ function runRoast() {
   console.log(`${C.yellow}  |      "Why burn 50k tokens when 400 do?"       |${C.reset}`);
   console.log(`  |-----------------------------------------------|`);
   console.log(
-    `  | LOGS SCANNED: ${padRight(`${files.length} files (${s.totalSteps} steps)`, 31)} |`
+    `  | LOGS SCANNED: ${padRight(`${sessionList.length} files (${s.totalSteps} steps)`, 31)} |`
   );
   console.log(`  |-----------------------------------------------|`);
   console.log(`  | ITEM                         QTY     EST. USD |`);
   console.log(`  |-----------------------------------------------|`);
   console.log(
-    `  | Full-File Reads (No Range)  ${padLeft(s.fullFileReads + 'x', 5)}   ${padLeft(formatUsd(rFull, decimals), 9)} |`
+    `  | ${padRight(readWasteLabel, 27)} ${padLeft(readWasteCount + 'x', 5)}   ${fullReadUsd.padStart(9)} |`
   );
   console.log(
-    `  | Duplicate File Re-Reads     ${padLeft(s.duplicateReads + 'x', 5)}   ${padLeft(formatUsd(rDup, decimals), 9)} |`
+    `  | Duplicate File Re-Reads     ${padLeft(s.duplicateReads + 'x', 5)}   ${dupReadUsd.padStart(9)} |`
   );
   console.log(
-    `  | Consecutive Cmd Retries     ${padLeft(s.commandRetries + 'x', 5)}   ${padLeft(formatUsd(rRetry, decimals), 9)} |`
+    `  | Consecutive Cmd Retries     ${padLeft(s.commandRetries + 'x', 5)}   ${retryUsd.padStart(9)} |`
   );
   console.log(
-    `  | Frustration / Fix Prompts   ${padLeft(s.rageMessages + 'x', 5)}   ${padLeft(formatUsd(rRage, decimals), 9)} |`
+    `  | Frustration / Fix Prompts   ${padLeft(s.rageMessages + 'x', 5)}   ${rageUsd.padStart(9)} |`
   );
   console.log(
-    `  | ${C.green}Surgical Line-Range Reads   ${padLeft(s.surgicalReads + 'x', 5)}   ${padLeft(zeroStr, 9)}${C.reset} |`
+    `  | ${C.green}Surgical Line-Range Reads   ${padLeft(s.surgicalReads + 'x', 5)}   ${zeroUsd.padStart(9)}${C.reset} |`
   );
   console.log(
-    `  | ${C.green}Targeted Grep Searches      ${padLeft(s.grepCalls + 'x', 5)}   ${padLeft(zeroStr, 9)}${C.reset} |`
+    `  | ${C.green}Targeted Grep Searches      ${padLeft(s.grepCalls + 'x', 5)}   ${zeroUsd.padStart(9)}${C.reset} |`
   );
   console.log(`  |-----------------------------------------------|`);
   console.log(
@@ -235,12 +262,12 @@ function runRoast() {
     `  | AVOIDABLE WASTED TOKENS    ${padLeft(s.wastedTokens.toLocaleString('en-US'), 18)} |`
   );
   console.log(`  |-----------------------------------------------|`);
-  console.log(`  | EST. BASELINE COST (@$3/1M):   ${padLeft(formatUsd(rRaw, decimals), 14)} |`);
+  console.log(`  | EST. BASELINE COST (@$${INPUT_USD_PER_MILLION_TOKENS}/1M):   ${rawUsd.padStart(14)} |`);
   console.log(
-    `  | ${C.green}WITH STINGY MODE (${padRight(`-${s.savingsPct}%):`, 9)}   ${padLeft(formatUsd(rStingy, decimals), 14)}${C.reset} |`
+    `  | ${C.green}WITH STINGY MODE (${padRight(`-${s.savingsPct}%):`, 9)}   ${stingyUsd.padStart(14)}${C.reset} |`
   );
   console.log(
-    `  | ${C.red}${C.bold}AVOIDABLE TOKEN WASTE:         ${padLeft(formatUsd(rWasted, decimals), 14)}${C.reset} |`
+    `  | ${C.red}${C.bold}AVOIDABLE TOKEN WASTE:         ${wastedUsd.padStart(14)}${C.reset} |`
   );
   console.log(`  |-----------------------------------------------|`);
   console.log(`  | DIAGNOSIS:                                    |`);
@@ -359,18 +386,25 @@ function runInit() {
   );
 }
 
-if (command === 'roast') {
-  runRoast();
+if (command === 'roast' || command === 'usage') {
+  try {
+    if (command === 'roast') runRoast();
+    else runUsage();
+  } catch (error) {
+    console.error(error.message);
+    process.exitCode = 1;
+  }
 } else if (command === 'audit') {
   runAudit(args[1] || process.cwd());
 } else if (command === 'init') {
   runInit();
 } else {
   console.log(`
-${C.yellow}${C.bold}🪙 stingy${C.reset} — Cut ~80% of AI agent input & tool-call token waste.
+${C.yellow}${C.bold}🪙 stingy${C.reset} — Roast tool waste and tally local agent usage.
 
 ${C.bold}Usage:${C.reset}
-  npx github:Kuro0No/stingy roast [path]       ${C.dim}# Audit local AI transcripts & print Token Autopsy Receipt${C.reset}
+  npx github:Kuro0No/stingy roast [path] [--source agent]
+  npx github:Kuro0No/stingy usage [agent] [--from report.json] [--json]
   npx github:Kuro0No/stingy audit [dir]        ${C.dim}# Scan repo for Token Black Hole files${C.reset}
   npx github:Kuro0No/stingy init --mode scrooge ${C.dim}# Install /stingy skill into your project${C.reset}
 `);

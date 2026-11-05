@@ -1,7 +1,7 @@
 {
   "name": "stingy",
-  "version": "0.1.0",
-  "description": "Cut ~80% of AI agent input & tool-call token waste with a 10-Coin Turn Budget for Claude Code, Cursor, and Antigravity.",
+  "version": "0.3.0",
+  "description": "A 10-coin tool budget for AI coding agents and an offline receipt for avoidable context waste.",
   "author": {
     "name": "Kuro0No"
   },

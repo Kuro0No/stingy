@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import {
   COIN_TABLE,
   isForbiddenPath,
@@ -13,8 +14,10 @@ import {
 } from '../src/core.mjs';
 import { runBenchmarks } from '../benchmarks/run-benchmark.mjs';
 import { inspectTranscriptFile } from '../benchmarks/measure-live-ab.mjs';
+import { runPluginComparison } from '../benchmarks/compare-plugins.mjs';
 
-const CLI_PATH = path.resolve(import.meta.dirname, '..', 'bin', 'stingy.mjs');
+const REPO_ROOT = fileURLToPath(new URL('../', import.meta.url));
+const CLI_PATH = path.join(REPO_ROOT, 'bin', 'stingy.mjs');
 
 test('Coin Table: grep search costs 0.5 coins', () => {
   const res = scoreToolAction({ type: 'grep', path: 'src/auth.ts' });
@@ -99,8 +102,8 @@ test('Coin Table: reading lockfiles or node_modules triggers instant 10-coin ban
 test('Claude Audit Regression #1: Empty HOME directory outputs honest "No local JSONL session transcripts found"', () => {
   const emptyHome = fs.mkdtempSync(path.join(os.tmpdir(), 'stingy-empty-home-'));
   try {
-    const stdout = execFileSync(process.execPath, [CLI_PATH, 'roast'], {
-      env: { ...process.env, HOME: emptyHome, USERPROFILE: emptyHome },
+    const stdout = execFileSync(process.execPath, [CLI_PATH, 'roast', '--source', 'claude'], {
+      env: { ...process.env, CLAUDE_CONFIG_DIR: emptyHome },
       encoding: 'utf8'
     });
     assert.match(stdout, /No local JSONL session transcripts found/i);
@@ -420,10 +423,11 @@ test('Codex Round-3 Regression #5: stingy init from a directory path containing 
     fs.mkdirSync(skillDir, { recursive: true });
     fs.mkdirSync(workDir, { recursive: true });
 
-    const repoRoot = path.resolve(import.meta.dirname, '..');
-    fs.copyFileSync(path.join(repoRoot, 'bin', 'stingy.mjs'), path.join(binDir, 'stingy.mjs'));
-    fs.copyFileSync(path.join(repoRoot, 'src', 'core.mjs'), path.join(srcDir, 'core.mjs'));
-    fs.copyFileSync(path.join(repoRoot, 'skills', 'stingy', 'SKILL.md'), path.join(skillDir, 'SKILL.md'));
+    fs.copyFileSync(path.join(REPO_ROOT, 'bin', 'stingy.mjs'), path.join(binDir, 'stingy.mjs'));
+    for (const module of ['core.mjs', 'transcripts.mjs', 'usage.mjs']) {
+      fs.copyFileSync(path.join(REPO_ROOT, 'src', module), path.join(srcDir, module));
+    }
+    fs.copyFileSync(path.join(REPO_ROOT, 'skills', 'stingy', 'SKILL.md'), path.join(skillDir, 'SKILL.md'));
 
     execFileSync(process.execPath, [path.join(binDir, 'stingy.mjs'), 'init'], {
       cwd: workDir,
@@ -519,7 +523,7 @@ test('Codex Round-5 Regression #1: Command argument case sensitivity is preserve
 });
 
 test('Codex Round-5 Regression #2: Sub-cent receipt line items switch to 4 decimals so two $0.00 items never sum to $0.01', () => {
-  const fixturePath = path.resolve(import.meta.dirname, '..', 'benchmarks', 'fixtures', 'sample-session.jsonl');
+  const fixturePath = path.join(REPO_ROOT, 'benchmarks', 'fixtures', 'sample-session.jsonl');
   const stdout = execFileSync(process.execPath, [CLI_PATH, 'roast', fixturePath], {
     encoding: 'utf8'
   });
@@ -530,9 +534,47 @@ test('Codex Round-5 Regression #2: Sub-cent receipt line items switch to 4 decim
   assert.match(stdout, /\$0\.0276/);
 });
 
+test('Retry matching preserves whitespace in quoted shell arguments', () => {
+  const first = 'grep "two  spaces" src/auth.ts';
+  const second = 'grep "two spaces" src/auth.ts';
+  const failed = (command) =>
+    JSON.stringify({
+      status: 'ERROR',
+      tool_calls: [{ name: 'run_command', arguments: { CommandLine: command } }]
+    });
+  assert.equal(analyzeJsonlLines([failed(first), failed(second)]).commandRetries, 0);
+  assert.equal(analyzeJsonlLines([failed(first), failed(first)]).commandRetries, 1);
+  assert.equal(analyzeJsonlLines([failed(first), failed('')]).commandRetries, 0);
+});
+
+test('The receipt adds precision when cent rounding would inflate the baseline', () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'stingy-receipt-'));
+  try {
+    const file = path.join(temp, 'session.jsonl');
+    const records = [
+      { type: 'user', content: 'fix it ' + 'x'.repeat(8493) },
+      {
+        tool_calls: [
+          { id: 'read-1', name: 'Read', arguments: { file_path: 'src/large.ts' } }
+        ]
+      },
+      { tool_use_id: 'read-1', content: ('x'.repeat(121) + '\n').repeat(300) }
+    ];
+    fs.writeFileSync(file, records.map((record) => JSON.stringify(record)).join('\n'));
+    const stdout = execFileSync(process.execPath, [CLI_PATH, 'roast', file], { encoding: 'utf8' });
+    assert.match(stdout, /Full-File Reads[^\n]*\$0\.0255/);
+    assert.match(stdout, /Frustration[^\n]*\$0\.0255/);
+    assert.match(stdout, /BASELINE COST[^\n]*\$0\.0530/);
+    assert.match(stdout, /WITH STINGY MODE[^\n]*\$0\.0020/);
+    assert.match(stdout, /AVOIDABLE TOKEN WASTE:[^\n]*\$0\.0510/);
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true });
+  }
+});
+
 test('Live A/B Empirical Transcripts: recorded Stingy run reduces tool payload tokens by >85% and cumulative billed tokens by >80% vs Baseline', () => {
-  const basePath = path.resolve(import.meta.dirname, '..', 'benchmarks', 'fixtures', 'live-ab-baseline.jsonl');
-  const stingyPath = path.resolve(import.meta.dirname, '..', 'benchmarks', 'fixtures', 'live-ab-stingy.jsonl');
+  const basePath = path.join(REPO_ROOT, 'benchmarks', 'fixtures', 'live-ab-baseline.jsonl');
+  const stingyPath = path.join(REPO_ROOT, 'benchmarks', 'fixtures', 'live-ab-stingy.jsonl');
 
   const b = inspectTranscriptFile(basePath);
   const s = inspectTranscriptFile(stingyPath);
@@ -551,4 +593,36 @@ test('Benchmark Model: 3-task trace model achieves >=80% uncached token reductio
   assert.equal(report.tasks.length, 3);
   assert.ok(report.summary.aggregateReductionPct >= 80.0);
   assert.ok(report.summary.aggregateCachedUsdReductionPct >= 75.0);
+});
+
+test('Multi-Plugin Live Telemetry Comparison: all 7 arms achieve 100% (3/3) bug accuracy + 8/8 executable assertions while Stingy & Trinity cut cost by >83%', () => {
+  const { arms, execCheck } = runPluginComparison();
+  assert.equal(arms.length, 7);
+  assert.equal(execCheck.passed, true);
+  assert.equal(execCheck.assertionsChecked, 8);
+
+  for (const arm of arms) {
+    assert.equal(arm.bugsFoundCount, 3, `Expected 3/3 bugs found for ${arm.name}`);
+    assert.equal(arm.accuracyPct, 100, `Expected 100% accuracy for ${arm.name}`);
+  }
+
+  const byId = Object.fromEntries(arms.map((a) => [a.id, a]));
+
+  // Output-only stack (caveman + ponytail) cuts output tokens & report length vs baseline,
+  // but leaves input token consumption high (>100k uncached input tokens)
+  assert.ok(byId['caveman-ponytail'].outputTokens < byId['none'].outputTokens);
+  assert.ok(byId['caveman-ponytail'].responseChars < byId['none'].responseChars);
+  assert.ok(byId['caveman-ponytail'].uncachedInputTokens > 100000);
+
+  // Stingy-only cuts uncached input tokens by >85% and total API cost by >83%
+  assert.ok(byId['stingy-only'].uncachedInputDeltaPct <= -85.0);
+  assert.ok(byId['stingy-only'].usdDeltaPct <= -83.0);
+  assert.equal(byId['stingy-only'].bankruptTurns, 0);
+
+  // Full Trinity stack (stingy + caveman + ponytail) achieves lowest input tokens, lowest output tokens, and lowest total cost
+  assert.ok(byId['trinity-stack'].uncachedInputDeltaPct <= -85.0);
+  assert.ok(byId['trinity-stack'].usdDeltaPct <= -84.0);
+  assert.ok(byId['trinity-stack'].outputTokens < byId['stingy-only'].outputTokens);
+  assert.ok(byId['trinity-stack'].responseChars < byId['stingy-only'].responseChars);
+  assert.equal(byId['trinity-stack'].bankruptTurns, 0);
 });

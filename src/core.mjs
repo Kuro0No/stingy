@@ -240,6 +240,7 @@ function extractNormalizedToolCalls(record) {
   const rawCalls = record.tool_calls || record.message?.tool_calls;
   if (Array.isArray(rawCalls)) {
     for (const tc of rawCalls) {
+      if (!tc || typeof tc !== 'object') continue;
       const id = tc.id || tc.tool_call_id || null;
       const name = String(tc.name || tc.function?.name || tc.tool_name || '').toLowerCase();
       let args = tc.arguments ?? tc.function?.arguments ?? tc.input ?? tc.args ?? {};
@@ -292,12 +293,11 @@ function collectToolResultsMap(records) {
       }
     }
 
-    if (rec.tool_use_id && rec.content !== undefined) {
-      const text = extractToolResultText(rec.content);
-      const lineCount = text ? text.split(/\r?\n/).length : 0;
+    if (rec.tool_use_id && (rec.content != null || rec.is_error || rec.status === 'ERROR')) {
+      const text = rec.content == null ? null : extractToolResultText(rec.content);
       resultMap.set(rec.tool_use_id, {
-        chars: text.length,
-        lines: lineCount,
+        chars: text?.length ?? null,
+        lines: text === null ? null : text ? text.split(/\r?\n/).length : 0,
         isError: rec.status === 'ERROR' || Boolean(rec.is_error)
       });
     }
@@ -449,24 +449,19 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
           if (targetPath && isForbiddenPath(targetPath)) {
             forbiddenReads++;
             currentTurnActions.push({ type: 'read', path: targetPath });
-            const tok = observedResult ? estimateTokensFromChars(observedResult.chars) : 8000;
+            const tok = observedResult?.chars != null ? estimateTokensFromChars(observedResult.chars) : 8000;
             baselineToolTokens += tok;
             forbiddenReadWastedTokens += tok;
             continue;
           }
 
           const span = getReadLineSpan(args);
-          // If explicit bounded range is supplied (e.g. offset+limit or StartLine+EndLine), use the smaller of span or actual returned lines
-          const effectiveLines =
-            span !== null
-              ? observedResult
-                ? Math.min(span, observedResult.lines)
-                : span
-              : observedResult
-                ? observedResult.lines
-                : null;
+          const resultLines = observedResult?.lines ?? null;
+          const effectiveLines = span !== null && resultLines !== null
+            ? Math.min(span, resultLines)
+            : span ?? resultLines;
 
-          const actualReadTokens = observedResult
+          const actualReadTokens = observedResult?.chars != null
             ? Math.max(25, estimateTokensFromChars(observedResult.chars))
             : null;
 
@@ -549,8 +544,9 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
           name.includes('replace')
         ) {
           editCalls++;
-          if (targetPath) {
-            uneditedReadPaths.delete(targetPath);
+          const editedPaths = Array.isArray(args.paths) ? args.paths : [targetPath];
+          for (const editedPath of editedPaths) {
+            if (typeof editedPath === 'string') uneditedReadPaths.delete(editedPath);
           }
           lastCommandFailed = false;
           lastFailedCommandSig = null;
@@ -565,12 +561,11 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
           commandCalls++;
           const cmdRaw = String(
             args.command || args.CommandLine || args.cmd || args.script || ''
-          ).trim();
-          const cmdParts = cmdRaw ? cmdRaw.replace(/\s+/g, ' ').trim().split(' ') : [];
-          const cmdSig =
-            cmdParts.length > 0
-              ? [cmdParts[0].toLowerCase(), ...cmdParts.slice(1)].join(' ')
-              : '__unspecified_cmd__';
+          ).trimStart();
+          // Fold the case of a bare program name and keep the shell arguments intact.
+          const cmdSig = cmdRaw
+            ? cmdRaw.replace(/^[\w.-]+(?=\s|$)/, (program) => program.toLowerCase())
+            : null;
 
           const failed =
             step.status === 'ERROR' ||
@@ -580,14 +575,7 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
           const cmdTok = actualReadTokensFromResult(observedResult, failed ? 2400 : 500);
           baselineToolTokens += cmdTok;
 
-          // Only count as a blind retry if the previous command failed AND either the full normalized command
-          // matches (e.g. re-running the exact same failing command) or neither specified a command string.
-          const isSameFailedCommand =
-            failed &&
-            lastCommandFailed &&
-            (cmdSig === lastFailedCommandSig ||
-              cmdSig === '__unspecified_cmd__' ||
-              lastFailedCommandSig === '__unspecified_cmd__');
+          const isSameFailedCommand = failed && lastCommandFailed && cmdSig === lastFailedCommandSig;
 
           if (isSameFailedCommand) {
             commandRetries++;
@@ -606,13 +594,8 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
     flushCurrentTurn();
   }
 
-  const wastedTokens =
-    fullReadWastedTokens +
-    mediumReadWastedTokens +
-    dupReadWastedTokens +
-    forbiddenReadWastedTokens +
-    retryWastedTokens +
-    rageWastedTokens;
+  const readWastedTokens = fullReadWastedTokens + mediumReadWastedTokens + forbiddenReadWastedTokens;
+  const wastedTokens = readWastedTokens + dupReadWastedTokens + retryWastedTokens + rageWastedTokens;
 
   const totalTokens = baselineToolTokens > 0 ? baselineToolTokens : observedCharTokens;
   const clampedWastedTokens = Math.min(totalTokens, wastedTokens);
@@ -620,7 +603,7 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
 
   const toUsd = (tok) => Number(((tok / 1_000_000) * pricePerMillionInput).toFixed(4));
 
-  const fullReadUsd = toUsd(fullReadWastedTokens + mediumReadWastedTokens + forbiddenReadWastedTokens);
+  const fullReadUsd = toUsd(readWastedTokens);
   const dupReadUsd = toUsd(dupReadWastedTokens);
   const retryUsd = toUsd(retryWastedTokens);
   const rageUsd = toUsd(rageWastedTokens);
@@ -656,6 +639,7 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
     totalTokens,
     wastedTokens: clampedWastedTokens,
     stingyTokens,
+    readWastedTokens,
     fullReadWastedTokens,
     dupReadWastedTokens,
     retryWastedTokens,

@@ -1,7 +1,7 @@
 {
   "name": "stingy-ai",
-  "version": "0.1.0",
-  "description": "Cut ~80% of AI agent input & tool-call token waste with a 10-Coin Turn Budget for Claude Code, Cursor, and Antigravity.",
+  "version": "0.3.0",
+  "description": "A 10-coin tool budget for AI coding agents and an offline receipt for avoidable context waste.",
   "type": "module",
   "bin": {
     "stingy": "./bin/stingy.mjs"
@@ -9,10 +9,12 @@
   "scripts": {
     "start": "node ./bin/stingy.mjs",
     "roast": "node ./bin/stingy.mjs roast",
+    "usage": "node ./bin/stingy.mjs usage",
     "audit": "node ./bin/stingy.mjs audit",
     "init": "node ./bin/stingy.mjs init",
     "benchmark": "node ./benchmarks/run-benchmark.mjs",
     "benchmark:live-ab": "node ./benchmarks/measure-live-ab.mjs",
+    "benchmark:plugins": "node ./benchmarks/compare-plugins.mjs",
     "test": "node --test"
   },
   "keywords": [

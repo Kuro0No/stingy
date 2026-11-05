@@ -83,6 +83,6 @@ if (process.argv[1] && process.argv[1].endsWith('measure-live-ab.mjs')) {
   console.log(`| **Unbounded Full-File Reads** | ${b.fullFileReads}x | ${s.fullFileReads}x | **-100%** |`);
   console.log(`| **Grep + Surgical Reads** | ${b.grepCalls} grep + ${b.surgicalReads} surgical | ${s.grepCalls} grep + ${s.surgicalReads} surgical | **Surgical** |`);
   console.log(`| **Tool Output Payload** | ${b.toolPayloadChars.toLocaleString('en-US')} chars (${b.toolPayloadTokens.toLocaleString('en-US')} tok) | ${s.toolPayloadChars.toLocaleString('en-US')} chars (${s.toolPayloadTokens.toLocaleString('en-US')} tok) | **-${payloadReductionPct}%** |`);
-  console.log(`| **Cumulative Billed Input Tokens** | ${b.cumulativeBilledTokens.toLocaleString('en-US')} tok | ${s.cumulativeBilledTokens.toLocaleString('en-US')} tok | **-${cumulativeReductionPct}%** |`);
+  console.log(`| **Estimated Cumulative Input Tokens** | ${b.cumulativeBilledTokens.toLocaleString('en-US')} tok | ${s.cumulativeBilledTokens.toLocaleString('en-US')} tok | **-${cumulativeReductionPct}%** |`);
   console.log(`| **10-Coin Turn Budget Score** | \`${b.coinScore} / 10.0\` (BANKRUPT) | \`${s.coinScore} / 10.0\` (PASS) | **Within Budget** |\n`);
 }
