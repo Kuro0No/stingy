@@ -501,6 +501,34 @@ test('Claude Round-4 Regression #4: stingy roast on non-existent path reports "P
   assert.match(stdout, /Path not found/i);
 });
 
+test('Codex Round-5 Regression #1: Command argument case sensitivity is preserved (grep Foo vs grep foo is NOT a retry)', () => {
+  const caseDiffArgs = [
+    JSON.stringify({
+      type: 'PLANNER_RESPONSE',
+      status: 'ERROR',
+      tool_calls: [{ name: 'run_command', arguments: { CommandLine: 'grep Foo src/auth.ts' } }]
+    }),
+    JSON.stringify({
+      type: 'PLANNER_RESPONSE',
+      status: 'ERROR',
+      tool_calls: [{ name: 'run_command', arguments: { CommandLine: 'grep foo src/auth.ts' } }]
+    })
+  ];
+  assert.equal(analyzeJsonlLines(caseDiffArgs).commandRetries, 0);
+});
+
+test('Codex Round-5 Regression #2: Sub-cent receipt line items switch to 4 decimals so two $0.00 items never sum to $0.01', () => {
+  const fixturePath = path.resolve(import.meta.dirname, '..', 'benchmarks', 'fixtures', 'sample-session.jsonl');
+  const stdout = execFileSync(process.execPath, [CLI_PATH, 'roast', fixturePath], {
+    encoding: 'utf8'
+  });
+  // Verify every dollar figure on the sample fixture receipt uses consistent 4-decimal precision
+  assert.match(stdout, /\$0\.0084/);
+  assert.match(stdout, /\$0\.0108/);
+  assert.match(stdout, /\$0\.0072/);
+  assert.match(stdout, /\$0\.0276/);
+});
+
 test('Benchmark Model: 3-task trace model achieves >=80% uncached token reduction and >=75% prompt-cached USD reduction', () => {
   const report = runBenchmarks();
   assert.equal(report.tasks.length, 3);

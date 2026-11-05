@@ -566,12 +566,15 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
           const cmdRaw = String(
             args.command || args.CommandLine || args.cmd || args.script || ''
           ).trim();
-          const cmdSig = cmdRaw
-            ? cmdRaw.replace(/\s+/g, ' ').trim().toLowerCase()
-            : '__unspecified_cmd__';
+          const cmdParts = cmdRaw ? cmdRaw.replace(/\s+/g, ' ').trim().split(' ') : [];
+          const cmdSig =
+            cmdParts.length > 0
+              ? [cmdParts[0].toLowerCase(), ...cmdParts.slice(1)].join(' ')
+              : '__unspecified_cmd__';
 
           const failed =
             step.status === 'ERROR' ||
+            step.message?.status === 'ERROR' ||
             step.is_error === true ||
             Boolean(observedResult && observedResult.isError);
           const cmdTok = actualReadTokensFromResult(observedResult, failed ? 2400 : 500);

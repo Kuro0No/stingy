@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="#license"><img src="https://img.shields.io/badge/License-MIT-black.svg" alt="License: MIT" /></a>
-  <a href="./test/stingy.test.mjs"><img src="https://img.shields.io/badge/tests-23%20passing-brightgreen.svg" alt="Tests: 23 passing" /></a>
+  <a href="./test/stingy.test.mjs"><img src="https://img.shields.io/badge/tests-25%20passing-brightgreen.svg" alt="Tests: 25 passing" /></a>
   <a href="./benchmarks/run-benchmark.mjs"><img src="https://img.shields.io/badge/trace%20model--81.2%25%20tokens-22c55e.svg" alt="Trace Model: -81.2% input tokens" /></a>
   <a href="https://kuro0no.github.io/stingy/"><img src="https://img.shields.io/badge/demo-kuro0no.github.io%2Fstingy-orange.svg" alt="Live Demo" /></a>
 </p>
@@ -134,8 +134,8 @@ The prompt skill ([`skills/stingy/SKILL.md`](./skills/stingy/SKILL.md)) instruct
 # Audit default ~/.claude and ~/.gemini directories:
 npx github:Kuro0No/stingy roast
 
-# Or audit a specific JSONL file or directory:
-npx github:Kuro0No/stingy roast ./path/to/session.jsonl
+# Reproduce with the bundled sample session fixture in this repo:
+node ./bin/stingy.mjs roast ./benchmarks/fixtures/sample-session.jsonl
 ```
 
 ---

@@ -177,8 +177,19 @@ function runRoast() {
   const dupReadUsd = s.dupReadUsd;
   const retryUsd = s.retryUsd;
   const rageUsd = s.rageUsd;
-  const decimals = s.rawCostUsd > 0 && s.rawCostUsd < 0.02 ? 4 : 2;
+  const hasSubCentItem = [fullReadUsd, dupReadUsd, retryUsd, rageUsd, s.wastedUsd].some(
+    (v) => v > 0 && v < 0.005
+  );
+  const decimals = (s.rawCostUsd > 0 && s.rawCostUsd < 0.05) || hasSubCentItem ? 4 : 2;
   const zeroStr = formatUsd(0, decimals);
+
+  const rFull = Number(fullReadUsd.toFixed(decimals));
+  const rDup = Number(dupReadUsd.toFixed(decimals));
+  const rRetry = Number(retryUsd.toFixed(decimals));
+  const rRage = Number(rageUsd.toFixed(decimals));
+  const rWasted = Number((rFull + rDup + rRetry + rRage).toFixed(decimals));
+  const rRaw = Number(Math.max(rWasted, Number(s.rawCostUsd.toFixed(decimals))).toFixed(decimals));
+  const rStingy = Number(Math.max(0, rRaw - rWasted).toFixed(decimals));
 
   console.log('');
   console.log(`${C.yellow}${C.bold}  =================================================${C.reset}`);
@@ -192,16 +203,16 @@ function runRoast() {
   console.log(`  | ITEM                         QTY     EST. USD |`);
   console.log(`  |-----------------------------------------------|`);
   console.log(
-    `  | Full-File Reads (No Range)  ${padLeft(s.fullFileReads + 'x', 5)}   ${padLeft(formatUsd(fullReadUsd, decimals), 9)} |`
+    `  | Full-File Reads (No Range)  ${padLeft(s.fullFileReads + 'x', 5)}   ${padLeft(formatUsd(rFull, decimals), 9)} |`
   );
   console.log(
-    `  | Duplicate File Re-Reads     ${padLeft(s.duplicateReads + 'x', 5)}   ${padLeft(formatUsd(dupReadUsd, decimals), 9)} |`
+    `  | Duplicate File Re-Reads     ${padLeft(s.duplicateReads + 'x', 5)}   ${padLeft(formatUsd(rDup, decimals), 9)} |`
   );
   console.log(
-    `  | Consecutive Cmd Retries     ${padLeft(s.commandRetries + 'x', 5)}   ${padLeft(formatUsd(retryUsd, decimals), 9)} |`
+    `  | Consecutive Cmd Retries     ${padLeft(s.commandRetries + 'x', 5)}   ${padLeft(formatUsd(rRetry, decimals), 9)} |`
   );
   console.log(
-    `  | Frustration / Fix Prompts   ${padLeft(s.rageMessages + 'x', 5)}   ${padLeft(formatUsd(rageUsd, decimals), 9)} |`
+    `  | Frustration / Fix Prompts   ${padLeft(s.rageMessages + 'x', 5)}   ${padLeft(formatUsd(rRage, decimals), 9)} |`
   );
   console.log(
     `  | ${C.green}Surgical Line-Range Reads   ${padLeft(s.surgicalReads + 'x', 5)}   ${padLeft(zeroStr, 9)}${C.reset} |`
@@ -224,12 +235,12 @@ function runRoast() {
     `  | AVOIDABLE WASTED TOKENS    ${padLeft(s.wastedTokens.toLocaleString('en-US'), 18)} |`
   );
   console.log(`  |-----------------------------------------------|`);
-  console.log(`  | EST. BASELINE COST (@$3/1M):   ${padLeft(formatUsd(s.rawCostUsd, decimals), 14)} |`);
+  console.log(`  | EST. BASELINE COST (@$3/1M):   ${padLeft(formatUsd(rRaw, decimals), 14)} |`);
   console.log(
-    `  | ${C.green}WITH STINGY MODE (${padRight(`-${s.savingsPct}%):`, 9)}   ${padLeft(formatUsd(s.stingyCostUsd, decimals), 14)}${C.reset} |`
+    `  | ${C.green}WITH STINGY MODE (${padRight(`-${s.savingsPct}%):`, 9)}   ${padLeft(formatUsd(rStingy, decimals), 14)}${C.reset} |`
   );
   console.log(
-    `  | ${C.red}${C.bold}AVOIDABLE TOKEN WASTE:         ${padLeft(formatUsd(s.wastedUsd, decimals), 14)}${C.reset} |`
+    `  | ${C.red}${C.bold}AVOIDABLE TOKEN WASTE:         ${padLeft(formatUsd(rWasted, decimals), 14)}${C.reset} |`
   );
   console.log(`  |-----------------------------------------------|`);
   console.log(`  | DIAGNOSIS:                                    |`);
