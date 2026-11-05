@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🪙 STINGY — Cut 80% Input & Tool-Call Token Waste for AI Coding Agents</title>
+  <meta name="description" content="Caveman saves output prose. Ponytail saves output code. Stingy saves the 85% of your AI bill burned on input context & reckless tool calls." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg: #F4F2EC;
+      --surface: #FAF9F5;
+      --elevated: #FFFFFF;
+      --ink: #111110;
+      --muted: #5C5A54;
+      --border: #D4D0C5;
+      --accent: #D9381E;
+      --green: #126E48;
+      --amber: #B86B00;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Plus Jakarta Sans', sans-serif;
+      --serif: 'Instrument Serif', Georgia, serif;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0D0D0C;
+      --surface: #151513;
+      --elevated: #1D1D1A;
+      --ink: #F2EFE9;
+      --muted: #9A9890;
+      --border: #2B2B27;
+      --accent: #FF5538;
+      --green: #28C780;
+      --amber: #F5A623;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 200ms ease, color 200ms ease;
+    }
+
+    .container {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Topbar & Header */
+    .topbar {
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      padding: 8px 0;
+      font-family: var(--mono);
+      font-size: 0.74rem;
+      color: var(--muted);
+    }
+
+    .topbar__inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .header__inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 66px;
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--mono);
+      font-weight: 700;
+      font-size: 1.1rem;
+      text-decoration: none;
+      color: var(--ink);
+    }
+
+    .logo__coin {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      background: var(--ink);
+      color: var(--bg);
+      border-radius: 2px;
+    }
+
+    .header__right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 10px 18px;
+      border: 1px solid var(--ink);
+      background: var(--ink);
+      color: var(--bg);
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 150ms ease;
+    }
+
+    .btn:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #FFFFFF;
+    }
+
+    .btn--outline {
+      background: transparent;
+      color: var(--ink);
+      border-color: var(--border);
+    }
+
+    .btn--outline:hover {
+      background: var(--ink);
+      color: var(--bg);
+      border-color: var(--ink);
+    }
+
+    /* Hero */
+    .hero {
+      padding: 68px 0 76px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero__grid {
+      display: grid;
+      grid-template-columns: 7fr 5fr;
+      gap: 44px;
+      align-items: start;
+    }
+
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 18px;
+      display: block;
+    }
+
+    h1 {
+      font-size: clamp(2.4rem, 4.5vw, 3.9rem);
+      line-height: 1.06;
+      letter-spacing: -0.03em;
+      margin-bottom: 22px;
+    }
+
+    h1 em {
+      font-family: var(--serif);
+      font-style: italic;
+      font-weight: 400;
+      color: var(--accent);
+    }
+
+    .hero__sub {
+      font-size: 1.08rem;
+      color: var(--muted);
+      max-width: 58ch;
+      margin-bottom: 30px;
+    }
+
+    .cmd-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 520px;
+      background: #141413;
+      color: #F4F2EC;
+      padding: 14px 18px;
+      border: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      margin-bottom: 32px;
+    }
+
+    .cmd-box button {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      padding: 5px 10px;
+      background: rgba(255,255,255,0.1);
+      color: #FFF;
+      border: 1px solid rgba(255,255,255,0.2);
+      cursor: pointer;
+    }
+
+    .cmd-box button:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    /* Trinity Table */
+    .trinity-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      margin-top: 24px;
+    }
+
+    .trinity-cell {
+      padding: 16px;
+      border-right: 1px solid var(--border);
+    }
+
+    .trinity-cell:last-child {
+      border-right: none;
+      background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+    }
+
+    .trinity-cell span {
+      display: block;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    .trinity-cell strong {
+      display: block;
+      font-family: var(--mono);
+      font-size: 0.96rem;
+      margin: 4px 0;
+    }
+
+    /* Supermarket Receipt Card */
+    .receipt-wrapper {
+      background: var(--elevated);
+      border: 1px solid var(--ink);
+      padding: 26px 24px;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      box-shadow: 8px 8px 0 var(--border);
+      position: relative;
+    }
+
+    .receipt-header {
+      text-align: center;
+      border-bottom: 1px dashed var(--border);
+      padding-bottom: 14px;
+      margin-bottom: 14px;
+    }
+
+    .receipt-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .receipt-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+    }
+
+    .receipt-divider {
+      border-top: 1px dashed var(--border);
+      margin: 12px 0;
+    }
+
+    .receipt-total {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 700;
+      font-size: 0.9rem;
+      padding: 4px 0;
+    }
+
+    .receipt-total--saved {
+      color: var(--green);
+    }
+
+    .receipt-total--burned {
+      color: var(--accent);
+    }
+
+    .receipt-badge {
+      margin-top: 12px;
+      padding: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      text-align: center;
+      font-weight: 700;
+    }
+
+    /* Interactive Section */
+    .section {
+      padding: 80px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section__head {
+      margin-bottom: 40px;
+    }
+
+    .section__title {
+      font-size: clamp(1.8rem, 3vw, 2.5rem);
+      letter-spacing: -0.025em;
+      margin-top: 8px;
+    }
+
+    .sim-grid {
+      display: grid;
+      grid-template-columns: 6fr 6fr;
+      gap: 32px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 30px;
+    }
+
+    .slider-group {
+      margin-bottom: 22px;
+    }
+
+    .slider-head {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      margin-bottom: 8px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .mode-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .mode-tab {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      padding: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    .mode-tab.is-active {
+      background: var(--ink);
+      color: var(--bg);
+      border-color: var(--ink);
+    }
+
+    pre.skill-box {
+      background: #141413;
+      color: #EAE8E1;
+      padding: 20px;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      overflow-x: auto;
+      line-height: 1.65;
+      border: 1px solid var(--border);
+    }
+
+    footer {
+      padding: 40px 0;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (max-width: 920px) {
+      .hero__grid,
+      .sim-grid,
+      .trinity-grid {
+        grid-template-columns: 1fr;
+      }
+      .trinity-cell {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="container topbar__inner">
+      <span>🪙 STINGY MODE FOR AI AGENTS // ZERO-DEPENDENCY CLI &amp; SKILL</span>
+      <span>WORKS WITH: CLAUDE CODE • CURSOR • ANTIGRAVITY • WINDSURF</span>
+    </div>
+  </div>
+
+  <header>
+    <div class="container header__inner">
+      <a href="#" class="logo">
+        <span class="logo__coin">🪙</span>
+        <span>stingy</span>
+      </a>
+      <div class="header__right">
+        <button class="btn btn--outline" id="theme-btn" type="button">DARK / LIGHT</button>
+        <a href="#roast-generator" class="btn">ROAST MY TOKEN BILL →</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="container hero__grid">
+        <div>
+          <span class="eyebrow">[ THE MISSING PIECE OF THE TOKEN-SAVING STACK ]</span>
+          <h1>
+            Why burn 50,000 input tokens reading whole files when <em>400 tokens do trick?</em>
+          </h1>
+          <p class="hero__sub">
+            <strong>Caveman</strong> compresses output prose. <strong>Ponytail</strong> compresses output code.
+            <strong>Stingy</strong> locks down the <strong>85% of your AI bill</strong> wasted on full-file reads, blind command retries, and uncompacted context loops.
+          </p>
+
+          <div class="cmd-box">
+            <span id="cli-cmd">npx stingy-ai roast</span>
+            <button type="button" id="copy-cli-btn">COPY</button>
+          </div>
+
+          <div class="trinity-grid">
+            <div class="trinity-cell">
+              <span>LAYER 1 // OUTPUT PROSE</span>
+              <strong>caveman</strong>
+              <span>Cuts polite filler &amp; chatter</span>
+            </div>
+            <div class="trinity-cell">
+              <span>LAYER 2 // OUTPUT CODE</span>
+              <strong>ponytail</strong>
+              <span>Enforces YAGNI code minimalism</span>
+            </div>
+            <div class="trinity-cell">
+              <span>LAYER 3 // INPUT &amp; TOOLS (85% COST)</span>
+              <strong>🪙 stingy</strong>
+              <span>10-Coin budget &amp; surgical reads</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- LIVE RECEIPT PREVIEW -->
+        <div>
+          <div class="receipt-wrapper" id="live-receipt">
+            <div class="receipt-header">
+              <div class="receipt-title">🪙 STINGY TOKEN AUTOPSY 🪙</div>
+              <div>"Why burn 50k tokens when 400 do?"</div>
+              <div id="rc-date">SESSION AUDIT // LOCAL LOGS</div>
+            </div>
+
+            <div class="receipt-row">
+              <span>Full-File Reads (No Line Range)</span>
+              <strong id="rc-reads">38x ($1.71)</strong>
+            </div>
+            <div class="receipt-row">
+              <span>Blind Command Retry Loops</span>
+              <strong id="rc-retries">9x ($0.59)</strong>
+            </div>
+            <div class="receipt-row">
+              <span>Rage Prompts ("wrong / fix it")</span>
+              <strong id="rc-rage">7x ($0.35)</strong>
+            </div>
+            <div class="receipt-row">
+              <span>Uncompacted Context Tax</span>
+              <strong id="rc-tax">142 turns ($1.95)</strong>
+            </div>
+            <div class="receipt-row">
+              <span>Surgical Line-Range Reads</span>
+              <strong id="rc-surgical">6x ($0.02)</strong>
+            </div>
+
+            <div class="receipt-divider"></div>
+
+            <div class="receipt-total">
+              <span>RAW AGENT BILL:</span>
+              <span id="rc-raw">$4.62</span>
+            </div>
+            <div class="receipt-total receipt-total--saved">
+              <span id="rc-saved-label">WITH STINGY MODE (-81%):</span>
+              <span id="rc-stingy">$0.88</span>
+            </div>
+            <div class="receipt-total receipt-total--burned">
+              <span>MONEY LIT ON FIRE:</span>
+              <span id="rc-burned">$3.74</span>
+            </div>
+
+            <div class="receipt-badge" id="rc-archetype">
+              DIAGNOSIS: THE WHOLE-FILE GLUTTON (Lv. 88)
+            </div>
+
+            <div style="margin-top: 14px; display: flex; gap: 8px;">
+              <button type="button" class="btn" style="width: 100%;" id="copy-receipt-btn">
+                COPY ASCII RECEIPT FOR X / REDDIT
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INTERACTIVE RECEIPT SIMULATOR -->
+    <section class="section" id="roast-generator">
+      <div class="container">
+        <div class="section__head">
+          <span class="eyebrow">[ 01 — INTERACTIVE TOKEN AUTOPSY SIMULATOR ]</span>
+          <h2 class="section__title">Calculate how much your AI agent is secretly burning</h2>
+        </div>
+
+        <div class="sim-grid">
+          <div class="panel">
+            <div class="slider-group">
+              <div class="slider-head">
+                <label for="sim-reads">Full-File Reads per session (without line ranges)</label>
+                <strong id="val-reads">38 files</strong>
+              </div>
+              <input type="range" id="sim-reads" min="2" max="120" value="38" />
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-head">
+                <label for="sim-retries">Failed Command / Build Retry Loops</label>
+                <strong id="val-retries">9 loops</strong>
+              </div>
+              <input type="range" id="sim-retries" min="0" max="40" value="9" />
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-head">
+                <label for="sim-rage">"Fix it / That's wrong" Rage Prompts</label>
+                <strong id="val-rage">7 prompts</strong>
+              </div>
+              <input type="range" id="sim-rage" min="0" max="30" value="7" />
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-head">
+                <label for="sim-turns">Turns before running /compact</label>
+                <strong id="val-turns">142 turns</strong>
+              </div>
+              <input type="range" id="sim-turns" min="15" max="300" value="142" />
+            </div>
+
+            <p style="font-size: 0.85rem; color: var(--muted);">
+              💡 Want to scan your real local logs? Run <code>npx stingy-ai roast</code> in your terminal to inspect <code>~/.claude</code> and <code>~/.gemini</code> transcripts offline.
+            </p>
+          </div>
+
+          <!-- 1-CLICK SKILL BUILDER -->
+          <div class="panel">
+            <span class="eyebrow">[ 02 — 1-CLICK SKILL &amp; RULE GENERATOR ]</span>
+            <div class="mode-tabs">
+              <button type="button" class="mode-tab" data-mode="lite">/stingy lite</button>
+              <button type="button" class="mode-tab is-active" data-mode="strict">/stingy strict</button>
+              <button type="button" class="mode-tab" data-mode="scrooge">/stingy scrooge</button>
+            </div>
+
+            <pre class="skill-box" id="skill-preview"><code># 🪙 Stingy Mode (STRICT) — 10-Coin Per-Turn Budget
+1. Always grep for exact symbol & line numbers BEFORE reading a file (0.5 Coins).
+2. Read at most 120 lines around the target (1.0 Coin). Never read whole files >250 lines (4.0 Coins).
+3. Never re-read a file already in context (5.0 Coins penalty).
+4. Append a 1-line receipt at the end of every reply:
+   🪙 [STINGY: X/10 Coins | Saved ~Yk input tokens ($Z)]</code></pre>
+
+            <button type="button" class="btn" style="width: 100%; margin-top: 14px;" id="copy-skill-btn">
+              COPY SKILL TO CLIPBOARD (CLAUDE.MD / SKILL.MD)
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      MIT LICENSE • OPEN-SOURCE AI TOKEN OPTIMIZATION • PAIR WITH CAVEMAN &amp; PONYTAIL
+    </div>
+  </footer>
+
+  <script>
+    // Theme toggle
+    const themeBtn = document.getElementById('theme-btn');
+    themeBtn.addEventListener('click', () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    });
+
+    // Copy CLI command
+    const copyCliBtn = document.getElementById('copy-cli-btn');
+    copyCliBtn.addEventListener('click', () => {
+      navigator.clipboard?.writeText('npx stingy-ai roast');
+      copyCliBtn.textContent = '✓ COPIED';
+      setTimeout(() => (copyCliBtn.textContent = 'COPY'), 1800);
+    });
+
+    // Interactive Receipt Simulator
+    const simReads = document.getElementById('sim-reads');
+    const simRetries = document.getElementById('sim-retries');
+    const simRage = document.getElementById('sim-rage');
+    const simTurns = document.getElementById('sim-turns');
+
+    function updateReceipt() {
+      const reads = Number(simReads.value);
+      const retries = Number(simRetries.value);
+      const rage = Number(simRage.value);
+      const turns = Number(simTurns.value);
+
+      document.getElementById('val-reads').textContent = `${reads} files`;
+      document.getElementById('val-retries').textContent = `${retries} loops`;
+      document.getElementById('val-rage').textContent = `${rage} prompts`;
+      document.getElementById('val-turns').textContent = `${turns} turns`;
+
+      const costReads = reads * 0.045;
+      const costRetries = retries * 0.065;
+      const costRage = rage * 0.05;
+      const costTax = turns * 0.0137;
+
+      const rawTotal = costReads + costRetries + costRage + costTax + 0.02;
+      const stingyTotal = Math.max(0.08, rawTotal * 0.19);
+      const burned = Math.max(0, rawTotal - stingyTotal);
+
+      document.getElementById('rc-reads').textContent = `${reads}x ($${costReads.toFixed(2)})`;
+      document.getElementById('rc-retries').textContent = `${retries}x ($${costRetries.toFixed(2)})`;
+      document.getElementById('rc-rage').textContent = `${rage}x ($${costRage.toFixed(2)})`;
+      document.getElementById('rc-tax').textContent = `${turns} turns ($${costTax.toFixed(2)})`;
+
+      document.getElementById('rc-raw').textContent = `$${rawTotal.toFixed(2)}`;
+      document.getElementById('rc-stingy').textContent = `$${stingyTotal.toFixed(2)}`;
+      document.getElementById('rc-burned').textContent = `$${burned.toFixed(2)}`;
+
+      let archetype = 'DIAGNOSIS: THE CONTEXT HOARDER (Lv. 72)';
+      if (reads > 50) archetype = 'DIAGNOSIS: THE WHOLE-FILE GLUTTON (Lv. 92)';
+      else if (rage >= 10) archetype = 'DIAGNOSIS: THE RAGE-PROMPT ARSONIST (Lv. 99)';
+      else if (reads < 12 && retries < 3) archetype = 'DIAGNOSIS: ONE-SHOT SNIPER (Lv. 50)';
+      document.getElementById('rc-archetype').textContent = archetype;
+    }
+
+    [simReads, simRetries, simRage, simTurns].forEach((el) =>
+      el.addEventListener('input', updateReceipt)
+    );
+
+    // Copy ASCII receipt
+    const copyReceiptBtn = document.getElementById('copy-receipt-btn');
+    copyReceiptBtn.addEventListener('click', () => {
+      const ascii = [
+        '=================================================',
+        '|          🪙 STINGY TOKEN AUTOPSY 🪙           |',
+        '|      "Why burn 50k tokens when 400 do?"       |',
+        '|-----------------------------------------------|',
+        `| Full-File Reads:         ${document.getElementById('rc-reads').textContent.padStart(20)} |`,
+        `| Blind Retry Loops:       ${document.getElementById('rc-retries').textContent.padStart(20)} |`,
+        `| Rage Prompts:            ${document.getElementById('rc-rage').textContent.padStart(20)} |`,
+        `| Uncompacted Tax:         ${document.getElementById('rc-tax').textContent.padStart(20)} |`,
+        '|-----------------------------------------------|',
+        `| RAW AGENT BILL:          ${document.getElementById('rc-raw').textContent.padStart(20)} |`,
+        `| WITH STINGY MODE (-81%): ${document.getElementById('rc-stingy').textContent.padStart(20)} |`,
+        `| MONEY LIT ON FIRE:       ${document.getElementById('rc-burned').textContent.padStart(20)} |`,
+        '|-----------------------------------------------|',
+        `| ${document.getElementById('rc-archetype').textContent.padEnd(45)} |`,
+        '================================================='
+      ].join('\n');
+      navigator.clipboard?.writeText(ascii);
+      copyReceiptBtn.textContent = '✓ COPIED ASCII RECEIPT!';
+      setTimeout(() => (copyReceiptBtn.textContent = 'COPY ASCII RECEIPT FOR X / REDDIT'), 2000);
+    });
+
+    // Mode tabs
+    const modePresets = {
+      lite: `# 🪙 Stingy Mode (LITE) — Surgical Engineer
+1. Always grep for symbol & line numbers BEFORE calling read_file.
+2. Read at most 120 lines around the target symbol (StartLine/EndLine).
+3. Batch independent tool calls in a single turn to avoid re-billing history.`,
+      strict: `# 🪙 Stingy Mode (STRICT) — 10-Coin Per-Turn Budget
+1. Always grep for exact symbol & line numbers BEFORE reading a file (0.5 Coins).
+2. Read at most 120 lines around the target (1.0 Coin). Never read whole files >250 lines (4.0 Coins).
+3. Never re-read a file already in context (5.0 Coins penalty).
+4. Append a 1-line receipt at the end of every reply:
+   🪙 [STINGY: X/10 Coins | Saved ~Yk input tokens ($Z)]`,
+      scrooge: `# 🪙 Stingy Mode (SCROOGE) — Maximum Miser (Pairs with Caveman & Ponytail)
+1. Zero speculative tool calls: if context is already visible, make 0 tool calls.
+2. Surgical reads only (<=80 lines after grep). Never touch lockfiles or dist/.
+3. One-shot edits: plan the complete patch before editing; blind retries cost 4.0 Coins.
+4. End every reply with: 🪙 [SCROOGE: X/10 Coins | Est. saved: $Y | UNDER BUDGET 🏆]`
+    };
+
+    const modeTabs = document.querySelectorAll('.mode-tab');
+    const skillPreview = document.getElementById('skill-preview');
+    modeTabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        modeTabs.forEach((t) => t.classList.remove('is-active'));
+        tab.classList.add('is-active');
+        skillPreview.textContent = modePresets[tab.dataset.mode];
+      });
+    });
+
+    const copySkillBtn = document.getElementById('copy-skill-btn');
+    copySkillBtn.addEventListener('click', () => {
+      navigator.clipboard?.writeText(skillPreview.textContent);
+      copySkillBtn.textContent = '✓ COPIED TO CLIPBOARD!';
+      setTimeout(() => (copySkillBtn.textContent = 'COPY SKILL TO CLIPBOARD (CLAUDE.MD / SKILL.MD)'), 2000);
+    });
+  </script>
+</body>
+</html>

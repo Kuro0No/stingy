@@ -1,0 +1,17 @@
+{
+  "name": "stingy",
+  "displayName": "Stingy",
+  "version": "1.0.0",
+  "description": "Cut 80% of AI agent input & tool-call token waste with a 10-Coin Turn Budget, surgical line-range reads, and a local Token Autopsy Receipt.",
+  "logo": "assets/logo.svg",
+  "suggestedPrompts": [
+    "Enable /stingy strict mode for this session and track your 10-coin tool budget.",
+    "Run /stingy-roast to audit my local AI agent transcripts and print a Token Autopsy Receipt.",
+    "Fix the bug in this repo using /stingy scrooge mode without reading any full files."
+  ],
+  "author": {
+    "name": "Stingy Contributors"
+  },
+  "homepage": "https://github.com/stingy-ai/stingy",
+  "repository": "https://github.com/stingy-ai/stingy"
+}

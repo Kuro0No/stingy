@@ -1,0 +1,20 @@
+{
+  "name": "stingy",
+  "version": "1.0.0",
+  "description": "Cut 80% of AI agent input & tool-call token waste with a 10-Coin Turn Budget, surgical line-range reads, and a local Token Autopsy Receipt.",
+  "author": {
+    "name": "Stingy Contributors"
+  },
+  "repository": "https://github.com/stingy-ai/stingy",
+  "license": "MIT",
+  "keywords": [
+    "tokens",
+    "context-window",
+    "cost-optimization",
+    "claude-code",
+    "antigravity",
+    "cursor",
+    "stingy",
+    "caveman"
+  ]
+}

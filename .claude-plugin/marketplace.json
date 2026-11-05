@@ -1,0 +1,14 @@
+{
+  "name": "stingy",
+  "owner": {
+    "name": "Stingy Contributors"
+  },
+  "plugins": [
+    {
+      "name": "stingy",
+      "source": "./",
+      "description": "Stingy Mode for AI Agents — Cut 80% input & tool-call token waste + Roast your token bill.",
+      "version": "1.0.0"
+    }
+  ]
+}
