@@ -1,7 +1,7 @@
 {
   "name": "stingy-ai",
-  "version": "1.0.0",
-  "description": "Stingy Mode for AI Coding Agents — Cut 80% of input context & tool-call token waste, enforce a per-turn Coin Budget, and roast your AI token bill.",
+  "version": "0.1.0",
+  "description": "Cut ~80% of AI agent input & tool-call token waste with a 10-Coin Turn Budget for Claude Code, Cursor, and Antigravity.",
   "type": "module",
   "bin": {
     "stingy": "./bin/stingy.mjs"
@@ -10,13 +10,14 @@
     "start": "node ./bin/stingy.mjs",
     "roast": "node ./bin/stingy.mjs roast",
     "audit": "node ./bin/stingy.mjs audit",
-    "init": "node ./bin/stingy.mjs init"
+    "init": "node ./bin/stingy.mjs init",
+    "benchmark": "node ./benchmarks/run-benchmark.mjs",
+    "test": "node --test"
   },
   "keywords": [
     "claude-code",
     "cursor",
     "antigravity",
-    "windsurf",
     "ai-agent",
     "token-optimization",
     "context-compression",

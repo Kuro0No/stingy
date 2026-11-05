@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 500" width="920" height="500" role="img" aria-label="Stingy CLI Token Autopsy Receipt and Reproducible Benchmark">
+  <defs>
+    <style>
+      .bg { fill: #0D1117; }
+      .frame { fill: #161B22; stroke: #30363D; stroke-width: 1.5; }
+      .panel { fill: #0D1117; stroke: #21262D; stroke-width: 1; }
+      .mono { font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 12.5px; }
+      .title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 12px; fill: #8B949E; font-weight: 600; }
+      .c-dim { fill: #8B949E; }
+      .c-white { fill: #E6EDF3; }
+      .c-gold { fill: #F59E0B; font-weight: 700; }
+      .c-green { fill: #3FB950; font-weight: 700; }
+      .c-red { fill: #F85149; font-weight: 700; }
+      .c-cyan { fill: #58A6FF; font-weight: 700; }
+      .fade-1 { animation: reveal 0.4s ease-out 0.1s both; }
+      .fade-2 { animation: reveal 0.4s ease-out 0.4s both; }
+      .fade-3 { animation: reveal 0.4s ease-out 0.8s both; }
+      .fade-4 { animation: reveal 0.4s ease-out 1.2s both; }
+      @keyframes reveal {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    </style>
+  </defs>
+
+  <!-- Outer Terminal Window -->
+  <rect x="4" y="4" width="912" height="492" rx="12" class="frame"/>
+  <rect x="4" y="4" width="912" height="38" rx="12" fill="#161B22"/>
+  <line x1="4" y1="42" x2="916" y2="42" stroke="#30363D" stroke-width="1"/>
+
+  <!-- macOS Traffic Lights -->
+  <circle cx="24" cy="23" r="6" fill="#FF5F56"/>
+  <circle cx="44" cy="23" r="6" fill="#FFBD2E"/>
+  <circle cx="64" cy="23" r="6" fill="#27C93F"/>
+  <text x="460" y="27" text-anchor="middle" class="title">stingy — zsh — 110×28</text>
+
+  <!-- Left Pane: ASCII Token Autopsy Receipt -->
+  <rect x="20" y="56" width="445" height="424" rx="8" class="panel"/>
+  <g class="mono fade-1">
+    <text x="36" y="80" class="c-green">$</text>
+    <text x="50" y="80" class="c-white">npx github:Kuro0No/stingy roast</text>
+  </g>
+
+  <g class="mono fade-2">
+    <text x="36" y="106" class="c-gold">===============================================</text>
+    <text x="36" y="124" class="c-gold">|          🪙 STINGY TOKEN AUTOPSY 🪙         |</text>
+    <text x="36" y="142" class="c-dim">|      "Why burn 50k tokens when 400 do?"     |</text>
+    <text x="36" y="158" class="c-dim">|---------------------------------------------|</text>
+    <text x="36" y="176" class="c-white">| LOGS SCANNED: 25 files (31,938 steps)       |</text>
+    <text x="36" y="192" class="c-dim">|---------------------------------------------|</text>
+    <text x="36" y="210" class="c-white">| Full-File Reads (No Range)   664x     $5.58 |</text>
+    <text x="36" y="228" class="c-white">| Duplicate File Re-Reads     1025x    $11.07 |</text>
+    <text x="36" y="246" class="c-green">| Surgical Line-Range Reads    154x     $0.00 |</text>
+    <text x="36" y="264" class="c-green">| Targeted Grep Searches       450x     $0.00 |</text>
+    <text x="36" y="280" class="c-dim">|---------------------------------------------|</text>
+    <text x="36" y="298" class="c-white">| 10-COIN BUDGET AVG:       2.16 / 10.0 Coins |</text>
+    <text x="36" y="316" class="c-white">| BANKRUPT TURNS (&gt;10c):    140 / 4,587 turns |</text>
+    <text x="36" y="332" class="c-dim">|---------------------------------------------|</text>
+    <text x="36" y="350" class="c-white">| EST. BASELINE COST (@$3/1M):         $23.32 |</text>
+    <text x="36" y="368" class="c-green">| WITH STINGY MODE (-71.5%):            $6.64 |</text>
+    <text x="36" y="386" class="c-red">| AVOIDABLE TOKEN WASTE:               $16.68 |</text>
+    <text x="36" y="402" class="c-dim">|---------------------------------------------|</text>
+    <text x="36" y="420" class="c-cyan">| DIAGNOSIS: THE GOLDFISH AGENT               |</text>
+    <text x="36" y="438" class="c-cyan">| (Re-reads same unedited files 1,025 times)  |</text>
+    <text x="36" y="456" class="c-gold">===============================================</text>
+  </g>
+
+  <!-- Right Pane: Reproducible 3-Task Benchmark -->
+  <rect x="480" y="56" width="420" height="424" rx="8" class="panel"/>
+  <g class="mono fade-3">
+    <text x="496" y="80" class="c-green">$</text>
+    <text x="510" y="80" class="c-white">npm run benchmark</text>
+    <text x="496" y="106" class="c-gold">REPRODUCIBLE 3-TASK BENCHMARK SUITE</text>
+    <text x="496" y="124" class="c-dim">(Includes 8.2k sys prompt + 450t skill cost/turn)</text>
+
+    <!-- Task 1 -->
+    <text x="496" y="156" class="c-white">Task 1: Fix JWT Skew (1,240-line file)</text>
+    <rect x="496" y="165" width="320" height="12" rx="3" fill="#F85149" opacity="0.85"/>
+    <text x="824" y="175" class="c-dim">110.1k</text>
+    <rect x="496" y="182" width="58" height="12" rx="3" fill="#3FB950"/>
+    <text x="562" y="192" class="c-green">19.7k (-82.1% | 2.5/10 Coins)</text>
+
+    <!-- Task 2 -->
+    <text x="496" y="224" class="c-white">Task 2: Cross-File Refactor (4 files, 2,860L)</text>
+    <rect x="496" y="233" width="320" height="12" rx="3" fill="#F85149" opacity="0.85"/>
+    <text x="824" y="243" class="c-dim">183.3k</text>
+    <rect x="496" y="250" width="61" height="12" rx="3" fill="#3FB950"/>
+    <text x="565" y="260" class="c-green">34.9k (-81.0% | 5.5/10 Coins)</text>
+
+    <!-- Task 3 -->
+    <text x="496" y="292" class="c-white">Task 3: Flaky Webhook Debug (1,620L + logs)</text>
+    <rect x="496" y="301" width="320" height="12" rx="3" fill="#F85149" opacity="0.85"/>
+    <text x="824" y="311" class="c-dim">111.3k</text>
+    <rect x="496" y="318" width="62" height="12" rx="3" fill="#3FB950"/>
+    <text x="566" y="328" class="c-green">21.4k (-80.8% | 3.5/10 Coins)</text>
+  </g>
+
+  <!-- Aggregate Summary Box -->
+  <g class="mono fade-4">
+    <rect x="496" y="352" width="388" height="110" rx="6" fill="#161B22" stroke="#3FB950" stroke-width="1.2"/>
+    <text x="512" y="376" class="c-white">AGGREGATE MEASURED RESULT:</text>
+    <text x="512" y="398" class="c-dim">Baseline Unconstrained:   404,669 input tokens</text>
+    <text x="512" y="418" class="c-green">Stingy (Scrooge Mode):     75,909 input tokens</text>
+    <text x="512" y="444" class="c-gold">TOTAL INPUT SAVINGS:      -81.2% (328,760 tok)</text>
+  </g>
+</svg>

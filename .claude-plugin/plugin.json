@@ -1,7 +1,7 @@
 {
   "name": "stingy",
-  "version": "1.0.0",
-  "description": "Cut 80% of AI agent input & tool-call token waste with a 10-Coin Turn Budget, surgical line-range reads, and a local Token Autopsy Receipt.",
+  "version": "0.1.0",
+  "description": "Cut ~80% of AI agent input & tool-call token waste with a 10-Coin Turn Budget for Claude Code, Cursor, and Antigravity.",
   "author": {
     "name": "Kuro0No"
   },

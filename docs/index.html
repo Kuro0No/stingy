@@ -426,7 +426,7 @@
   <div class="topbar">
     <div class="container topbar__inner">
       <span>🪙 STINGY MODE FOR AI AGENTS // ZERO-DEPENDENCY CLI &amp; SKILL</span>
-      <span>WORKS WITH: CLAUDE CODE • CURSOR • ANTIGRAVITY • WINDSURF</span>
+      <span>WORKS WITH: CLAUDE CODE • CURSOR • ANTIGRAVITY</span>
     </div>
   </div>
 
@@ -455,11 +455,11 @@
           </h1>
           <p class="hero__sub">
             <strong>Caveman</strong> compresses output prose. <strong>Ponytail</strong> compresses output code.
-            <strong>Stingy</strong> locks down the <strong>85% of your AI bill</strong> wasted on full-file reads, blind command retries, and uncompacted context loops.
+            <strong>Stingy</strong> locks down the <strong>~80% of your AI bill</strong> wasted on full-file reads, duplicate re-reads, and blind command retry loops.
           </p>
 
           <div class="cmd-box">
-            <span id="cli-cmd">npx stingy-ai roast</span>
+            <span id="cli-cmd">npx github:Kuro0No/stingy roast</span>
             <button type="button" id="copy-cli-btn">COPY</button>
           </div>
 
@@ -584,7 +584,7 @@
             </div>
 
             <p style="font-size: 0.85rem; color: var(--muted);">
-              💡 Want to scan your real local logs? Run <code>npx stingy-ai roast</code> in your terminal to inspect <code>~/.claude</code> and <code>~/.gemini</code> transcripts offline.
+              💡 Want to scan your real local logs? Run <code>npx github:Kuro0No/stingy roast</code> in your terminal to inspect <code>~/.claude</code> and <code>~/.gemini</code> transcripts offline.
             </p>
           </div>
 
@@ -630,7 +630,7 @@
     // Copy CLI command
     const copyCliBtn = document.getElementById('copy-cli-btn');
     copyCliBtn.addEventListener('click', () => {
-      navigator.clipboard?.writeText('npx stingy-ai roast');
+      navigator.clipboard?.writeText('npx github:Kuro0No/stingy roast');
       copyCliBtn.textContent = '✓ COPIED';
       setTimeout(() => (copyCliBtn.textContent = 'COPY'), 1800);
     });

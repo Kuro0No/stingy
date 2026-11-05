@@ -1,14 +1,14 @@
 {
   "name": "stingy",
   "owner": {
-    "name": "Stingy Contributors"
+    "name": "Kuro0No"
   },
   "plugins": [
     {
       "name": "stingy",
       "source": "./",
-      "description": "Stingy Mode for AI Agents — Cut 80% input & tool-call token waste + Roast your token bill.",
-      "version": "1.0.0"
+      "description": "Cut ~80% of AI agent input & tool-call token waste with a 10-Coin Turn Budget for Claude Code, Cursor, and Antigravity.",
+      "version": "0.1.0"
     }
   ]
 }

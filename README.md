@@ -2,140 +2,139 @@
 
 > **"Why burn 50,000 input tokens reading whole files when 400 tokens do trick?"**
 >
-> **Stingy Mode** for Claude Code, Cursor, Antigravity, and Windsurf. Enforces a ruthless per-turn **10-Coin Budget** on file reads and tool calls, cuts **75%–85% of input context bloat**, and roasts your local AI token bill.
+> **Stingy Mode** plugin, skill, and transcript auditor for **Claude Code, Cursor, and Antigravity**. Enforces a per-turn **10-Coin Budget** on file reads and tool calls, cutting **~80% of tool-driven input token bloat** (**81.2%** measured across our reproducible 3-task benchmark suite).
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](#license)
-[![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](#)
-[![Live Demo](https://img.shields.io/badge/demo-kuro0no.github.io%2Fstingy-orange.svg)](https://kuro0no.github.io/stingy/)
+<p align="center">
+  <img src="./assets/hero-demo.svg" width="880" alt="Stingy CLI Token Autopsy Receipt and Reproducible Benchmark" />
+</p>
 
-🌐 **Interactive Token Autopsy Simulator & Live Demo:** [https://kuro0no.github.io/stingy/](https://kuro0no.github.io/stingy/)
-
----
-
-## 🧩 The Missing Piece of the Token-Saving Stack
-
-Everyone uses **Caveman** to shrink output prose and **Ponytail** to shrink output code.
-**But output tokens are only ~15% of your AI bill.**
-
-The other **85% of your money and 5-hour rate limit** is burned when your agent:
-1. Calls `Read` on an entire 1,800-line file just to change 3 lines.
-2. Re-reads the exact same file 4 times in one session.
-3. Runs blind `edit -> test fail -> edit -> test fail` loops that re-bill your entire conversation history on every turn.
-
-| Layer | Tool | What It Compresses | Share of Your Bill |
-| :--- | :--- | :--- | :--- |
-| **1. Output Prose** | `caveman` | Polite chatter & filler explanations | ~10% |
-| **2. Output Code** | `ponytail` | Over-engineered boilerplate (YAGNI) | ~10% |
-| **3. Input & Tool Calls** | **🪙 `stingy`** | **Full-file reads, context re-reads & retry loops** | **~80%** |
-
-**Stingy is designed to run alongside `caveman` and `ponytail` with zero prompt conflicts.**
+<p align="center">
+  <a href="#license"><img src="https://img.shields.io/badge/License-MIT-black.svg" alt="License: MIT" /></a>
+  <a href="./test/stingy.test.mjs"><img src="https://img.shields.io/badge/tests-11%20passing-brightgreen.svg" alt="Tests: 11 passing" /></a>
+  <a href="./benchmarks/run-benchmark.mjs"><img src="https://img.shields.io/badge/benchmark--81.2%25%20input%20tokens-22c55e.svg" alt="Benchmark: -81.2% input tokens" /></a>
+  <a href="https://kuro0no.github.io/stingy/"><img src="https://img.shields.io/badge/demo-kuro0no.github.io%2Fstingy-orange.svg" alt="Live Demo" /></a>
+</p>
 
 ---
 
-## 🧾 1. Roast Your Local AI Token Bill (`npx stingy-ai roast`)
+## ⚡ Quick Start (1 Command, Zero Dependencies)
 
-Curious how much money your AI agent secretly lit on fire this week? Run the **100% offline** transcript autopsy against your local `~/.claude` and `~/.gemini` logs:
+Install the `/stingy` skill into your project right from GitHub:
 
 ```bash
-npx stingy-ai roast
+npx github:Kuro0No/stingy init
 ```
 
-```text
-  =================================================
-  |          🪙 STINGY TOKEN AUTOPSY 🪙           |
-  |      "Why burn 50k tokens when 400 do?"       |
-  |-----------------------------------------------|
-  | LOGS SCANNED: 25 local session(s)             |
-  |-----------------------------------------------|
-  | ITEM                         QTY     EST. USD |
-  |-----------------------------------------------|
-  | Full-File Reads (No Range)  1360x      $61.20 |
-  | Blind Command Retry Loops      2x       $0.13 |
-  | Rage Prompts ("fix it/wrong")355x      $17.75 |
-  | Uncompacted History Tax    35205t      $65.88 |
-  | Surgical Line-Range Reads    368x       $1.47 |
-  |-----------------------------------------------|
-  | TOTAL TOKENS PROCESSED             62,237,047 |
-  | WASTED INPUT TOKENS                30,500,560 |
-  |-----------------------------------------------|
-  | EST. RAW AGENT BILL:                  $298.74 |
-  | WITH STINGY MODE (-64%):              $152.34 |
-  | MONEY YOU LIT ON FIRE:                $146.40 |
-  |-----------------------------------------------|
-  | DIAGNOSIS:                                    |
-  | THE WHOLE-FILE GLUTTON (Lv. 88)               |
-  |-----------------------------------------------|
-  | FIX IT IN 5 SECONDS:                          |
-  |   npx stingy-ai init --mode scrooge           |
-  |   Pairs with: caveman + ponytail              |
-  =================================================
+Or audit your local `~/.claude` and `~/.gemini/antigravity` session logs offline:
+
+```bash
+npx github:Kuro0No/stingy roast
 ```
 
----
+<details>
+<summary><b>Other install methods (Claude Code Plugin Marketplace, Skills CLI, Antigravity Plugin)</b></summary>
 
-## ⚡ 2. Install as a Plugin or Skill in 5 Seconds
+<br />
 
-### Option A: Claude Code Plugin Marketplace (like `caveman`)
+**Claude Code Plugin Marketplace (like `caveman`):**
 ```bash
 /plugin marketplace add Kuro0No/stingy
 /plugin install stingy@stingy
 ```
 
-### Option B: Universal Skills CLI (Claude Code, Antigravity, Cursor, Codex, Windsurf)
+**Universal Skills CLI:**
 ```bash
 npx skills add Kuro0No/stingy
 ```
 
-### Option C: Antigravity Plugin Bundle
-Copy or clone this repo into `~/.gemini/config/plugins/stingy`:
+**Antigravity Native Plugin Bundle:**
 ```bash
 git clone https://github.com/Kuro0No/stingy.git ~/.gemini/config/plugins/stingy
 ```
 
-### Option D: Zero-Config NPX CLI
+</details>
+
+---
+
+## 🧩 The Missing Piece of the Token-Saving Stack
+
+Tools like **Caveman** shrink output prose and **Ponytail** shrinks output code. **But output tokens are only ~15%–20% of a typical coding session's token volume.**
+
+The remaining **~80% of your context window and 5-hour rate limit** is consumed on the **input & tool-call side** when an agent:
+1. Calls `Read` on an entire 1,200-line file without `offset`/`limit` or `StartLine`/`EndLine` just to inspect 15 lines.
+2. Re-reads the exact same unedited file multiple times in the same session.
+3. Runs blind `edit -> failing test -> edit` retry loops that re-bill accumulated history on every turn.
+
+| Layer | Tool | Target | Share of Session Volume |
+| :--- | :--- | :--- | :--- |
+| **1. Output Prose** | `caveman` | Conversational filler & verbose explanations | ~10% |
+| **2. Output Code** | `ponytail` | Over-engineered boilerplate (YAGNI) | ~10% |
+| **3. Input & Tool Calls** | **🪙 `stingy`** | **Unbounded file reads, duplicate re-reads & retry loops** | **~80%** |
+
+**Stingy is designed to run alongside `caveman` and `ponytail` with zero prompt conflicts.**
+
+---
+
+## 📊 Reproducible Benchmark (`npm run benchmark`)
+
+Does forcing grep-first surgical reads actually save ~80% of billed input tokens once you account for fixed system prompts and the token cost of `SKILL.md` itself?
+
+Run the deterministic benchmark harness yourself:
+
 ```bash
-npx stingy-ai init --mode scrooge
+git clone https://github.com/Kuro0No/stingy.git
+cd stingy
+npm run benchmark
+npm test
 ```
 
-### Included Skills & Rules in the Plugin Bundle
-| Customization | Type | Description |
-| :--- | :--- | :--- |
-| `/stingy [lite\|strict\|scrooge]` | **Skill** (`skills/stingy/SKILL.md`) | Activates the 10-Coin Turn Budget and surgical line-range read contract. |
-| `/stingy-roast` | **Skill** (`skills/stingy-roast/SKILL.md`) | Audits your local session logs and prints the ASCII **Token Autopsy Receipt** right in chat. |
-| `rules/AGENTS.md` | **Always-On Rule** | Enforces locate-first `grep` before `read_file` and blocks duplicate full-file reads whenever the plugin is enabled. |
+### Methodology ([`benchmarks/run-benchmark.mjs`](./benchmarks/run-benchmark.mjs))
+* **Cumulative Multi-Turn Billing:** Every turn re-bills the accumulated conversation context plus a fixed **8,200-token** base system/schema overhead.
+* **Honest Skill Overhead:** The Stingy agent is explicitly charged **+450 tokens per turn** for loading `skills/stingy/SKILL.md` itself.
+* **BPE Token Estimation:** Measured at 4 characters per token across generated TypeScript service fixtures (`1,240` to `2,860` lines).
+
+| Task | Baseline Input Tokens | Stingy (`scrooge`) Tokens | Saved Tokens | Reduction | Coin Score |
+| :--- | ---: | ---: | ---: | ---: | ---: |
+| **Task 1:** Fix JWT clock-skew bug (1,240-line service) | 110,085 | 19,655 | 90,430 | **-82.1%** | `2.5 / 10` |
+| **Task 2:** Cross-file header refactor (4 files, 2,860 lines) | 183,267 | 34,902 | 148,365 | **-81.0%** | `5.5 / 10` |
+| **Task 3:** Diagnose flaky webhook test (1,620 lines + logs) | 111,317 | 21,352 | 89,965 | **-80.8%** | `3.5 / 10` |
+| **TOTAL / AGGREGATE** | **404,669** | **75,909** | **328,760** | **-81.2%** | **PASS** |
 
 ---
 
 ## 🪙 How the 10-Coin Budget Contract Works
 
-When `/stingy` is active, the agent is given a hard allowance of **10.0 Coins per turn**:
+Both the prompt skill ([`skills/stingy/SKILL.md`](./skills/stingy/SKILL.md)) and the CLI scoring engine ([`src/core.mjs`](./src/core.mjs)) enforce a **10.0-Coin allowance per turn**:
 
 | Tool Action | Coin Cost | Rule |
 | :--- | :--- | :--- |
 | `grep` / `ripgrep` with path & line numbers | **0.5 Coins** | **Mandatory first step** before opening unfamiliar files. |
-| `read_file` with surgical range (`≤ 120 lines`) | **1.0 Coin** | Standard surgical inspection. |
-| `read_file` on a full file (`> 250 lines`) | **4.0 Coins** | **Heavily taxed.** Forbidden unless rewriting >60% of the file. |
-| Re-reading a file already in context | **5.0 Coins** | **Forbidden.** Read your own context window. |
-| Blind command retry after an error | **4.0 Coins** | **Salary deduction.** Diagnose root cause before retrying. |
-| Reading lockfiles, `dist/`, or `node_modules/` | **10.0 Coins** | **Instant Bankruptcy.** |
-
-At the end of every response in `strict` or `scrooge` mode, the agent prints a 1-line receipt:
-```text
-🪙 [SCROOGE: 1.5/10 Coins | 1 grep + 1 surgical read (65 lines) | Est. saved: ~19,200 tokens ($0.29) 🏆]
-```
+| `read_file` / `Read` with range (`≤ 120 lines`) | **1.0 Coin** | Standard surgical inspection (`StartLine`/`EndLine` or `offset`/`limit`). |
+| `read_file` / `Read` with medium range (`121–250 lines`) | **2.0 Coins** | Permitted only for large functions/classes. |
+| Unbounded full-file read (`> 250 lines` or no range) | **4.0 Coins** | **Heavily taxed.** Avoid unless rewriting >60% of the file. |
+| Duplicate re-read of an unedited file in context | **5.0 Coins** | **Forbidden.** Reference the existing context window. |
+| Consecutive failed command retry without prior edit | **4.0 Coins** | Diagnose the root cause before re-running. |
+| Reading lockfiles, `dist/`, or `node_modules/` | **10.0 Coins** | **Instant Turn Bankruptcy.** |
 
 ---
 
-## 🔍 3. Find "Token Black Holes" in Your Repo
+## 🧾 Offline Transcript Autopsy (`stingy roast`)
 
-Find which files in your project are silently draining your context window every time an agent touches them:
+`stingy roast` parses real JSONL transcripts from **Claude Code** (`~/.claude/projects/**/*.jsonl`) and **Antigravity** (`~/.gemini/antigravity/brain/**/*.jsonl`) using [`analyzeJsonlLines()`](./src/core.mjs):
+
+* **No fake data:** If no transcripts exist in `HOME` (or the target path), `stingy roast` reports `No local JSONL session transcripts found` and exits cleanly.
+* **No artificial floors or clamps:** If your transcripts contain 100% surgical line-range reads (`offset`/`limit` or `StartLine`/`EndLine`), 0 duplicate reads, and 0 retries, `stingy roast` reports **`0` wasted tokens, `$0.00` waste (`-0.0%`), and `CERTIFIED SCROOGE`**.
 
 ```bash
-npx stingy-ai audit .
+# Audit default ~/.claude and ~/.gemini directories:
+npx github:Kuro0No/stingy roast
+
+# Or audit a specific JSONL file or directory:
+npx github:Kuro0No/stingy roast ./path/to/session.jsonl
 ```
 
 ---
 
 ## 📄 License
 
-MIT License. Free forever. Stop feeding whole files to the token furnace.
+MIT License. See [LICENSE](./LICENSE).
