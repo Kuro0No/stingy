@@ -12,6 +12,7 @@
     "audit": "node ./bin/stingy.mjs audit",
     "init": "node ./bin/stingy.mjs init",
     "benchmark": "node ./benchmarks/run-benchmark.mjs",
+    "benchmark:live-ab": "node ./benchmarks/measure-live-ab.mjs",
     "test": "node --test"
   },
   "keywords": [

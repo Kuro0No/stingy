@@ -12,6 +12,7 @@ import {
   analyzeJsonlLines
 } from '../src/core.mjs';
 import { runBenchmarks } from '../benchmarks/run-benchmark.mjs';
+import { inspectTranscriptFile } from '../benchmarks/measure-live-ab.mjs';
 
 const CLI_PATH = path.resolve(import.meta.dirname, '..', 'bin', 'stingy.mjs');
 
@@ -527,6 +528,22 @@ test('Codex Round-5 Regression #2: Sub-cent receipt line items switch to 4 decim
   assert.match(stdout, /\$0\.0108/);
   assert.match(stdout, /\$0\.0072/);
   assert.match(stdout, /\$0\.0276/);
+});
+
+test('Live A/B Empirical Transcripts: recorded Stingy run reduces tool payload tokens by >85% and cumulative billed tokens by >80% vs Baseline', () => {
+  const basePath = path.resolve(import.meta.dirname, '..', 'benchmarks', 'fixtures', 'live-ab-baseline.jsonl');
+  const stingyPath = path.resolve(import.meta.dirname, '..', 'benchmarks', 'fixtures', 'live-ab-stingy.jsonl');
+
+  const b = inspectTranscriptFile(basePath);
+  const s = inspectTranscriptFile(stingyPath);
+
+  assert.ok(b.toolPayloadTokens > 80000);
+  assert.ok(s.toolPayloadTokens < 10000);
+  assert.equal(b.bankruptTurns, 1);
+  assert.equal(s.bankruptTurns, 0);
+
+  const cumulativeReductionPct = ((b.cumulativeBilledTokens - s.cumulativeBilledTokens) / b.cumulativeBilledTokens) * 100;
+  assert.ok(cumulativeReductionPct >= 80.0, `Expected >=80% live A/B reduction, got ${cumulativeReductionPct.toFixed(1)}%`);
 });
 
 test('Benchmark Model: 3-task trace model achieves >=80% uncached token reduction and >=75% prompt-cached USD reduction', () => {

@@ -2,7 +2,7 @@
 
 > **"Why burn 50,000 input tokens reading whole files when 400 tokens do trick?"**
 >
-> **Stingy Mode** plugin, skill, and offline transcript auditor for **Claude Code, Cursor, and Antigravity**. Enforces a per-turn **10-Coin Budget** on file reads and tool calls — cutting **up to ~80% of tool-driven input token bloat** in worst-case full-file traces (`-81.2%` in our synthetic trace model; **`-29.4%` measured avoidable waste** across 25 real local sessions where the agent already used partial reads).
+> **Stingy Mode** plugin, skill, and offline transcript auditor for **Claude Code, Cursor, and Antigravity**. Enforces a per-turn **10-Coin Budget** on file reads and tool calls — cutting **~94.4% of cumulative billed input tokens** (`-98.7%` tool output payload) in our recorded **Live LLM A/B Experiment**, `-81.2%` in our synthetic 3-task trace model, and flagging **`-29.4%` historical avoidable waste** across 25 real local sessions.
 
 <p align="center">
   <img src="./assets/hero-demo.svg" width="880" alt="Stingy CLI Token Autopsy Receipt and Trace-Driven Benchmark Model" />
@@ -10,8 +10,8 @@
 
 <p align="center">
   <a href="#license"><img src="https://img.shields.io/badge/License-MIT-black.svg" alt="License: MIT" /></a>
-  <a href="./test/stingy.test.mjs"><img src="https://img.shields.io/badge/tests-25%20passing-brightgreen.svg" alt="Tests: 25 passing" /></a>
-  <a href="./benchmarks/run-benchmark.mjs"><img src="https://img.shields.io/badge/trace%20model--81.2%25%20tokens-22c55e.svg" alt="Trace Model: -81.2% input tokens" /></a>
+  <a href="./test/stingy.test.mjs"><img src="https://img.shields.io/badge/tests-26%20passing-brightgreen.svg" alt="Tests: 26 passing" /></a>
+  <a href="./benchmarks/measure-live-ab.mjs"><img src="https://img.shields.io/badge/live%20A%2FB--94.4%25%20input%20tokens-22c55e.svg" alt="Live A/B: -94.4% input tokens" /></a>
   <a href="https://kuro0no.github.io/stingy/"><img src="https://img.shields.io/badge/demo-kuro0no.github.io%2Fstingy-orange.svg" alt="Live Demo" /></a>
 </p>
 
@@ -76,7 +76,34 @@ The remaining **~80% of your context window and 5-hour rate limit** is consumed 
 
 ---
 
-## 📊 Trace-Driven Token & Prompt-Cache Benchmark Model (`npm run benchmark`)
+## 🧪 1. Live LLM A/B Empirical Experiment (`npm run benchmark:live-ab`)
+
+We ran two parallel LLM subagents on the exact same 3-file, 3,100-line codebase ([`benchmarks/setup-live-ab.mjs`](./benchmarks/setup-live-ab.mjs)) tasked with finding and diagnosing 3 specific bugs (`verifyJwtExpiration`, `consumeRateQuota`, and `computeBackoffDelayMs`):
+
+* **Control Arm ([`benchmarks/fixtures/live-ab-baseline.jsonl`](./benchmarks/fixtures/live-ab-baseline.jsonl)):** Standard agent reading files without `StartLine`/`EndLine` bounds.
+* **Treatment Arm ([`benchmarks/fixtures/live-ab-stingy.jsonl`](./benchmarks/fixtures/live-ab-stingy.jsonl)):** Agent running with `/stingy scrooge` (10-Coin Turn Budget).
+
+Both raw recorded JSONL session transcripts are checked into [`benchmarks/fixtures/`](./benchmarks/fixtures/). Verify them directly:
+
+```bash
+npm run benchmark:live-ab
+node ./bin/stingy.mjs roast ./benchmarks/fixtures/live-ab-baseline.jsonl
+node ./bin/stingy.mjs roast ./benchmarks/fixtures/live-ab-stingy.jsonl
+```
+
+| Metric | Baseline Agent (No Stingy) | Stingy Agent (`/stingy scrooge`) | Measured Delta |
+| :--- | ---: | ---: | ---: |
+| **Bugs Correctly Found & Line #** | **3 / 3 (100%)** (Lines 741, 617, 882) | **3 / 3 (100%)** (Lines 741, 617, 882) | **Identical Accuracy** |
+| **LLM Planner Turns** | `4 turns` (`15 steps`) | `2 turns` (`7 steps`) | **-2 turns** |
+| **Unbounded Full-File Reads** | `9x` | `0x` | **-100%** |
+| **Surgical Line-Range Reads** | `0x` | `3x` (+ 1 grep) | **100% Bounded** |
+| **Tool Output Payload** | `376,606 chars` (`94,152 tok`) | `4,901 chars` (`1,226 tok`) | **-98.7%** |
+| **Cumulative Billed Input Tokens** | `257,297 tok` | `14,352 tok` | **-94.4%** |
+| **10-Coin Turn Budget Score** | `36.0 / 10.0 Coins` (**BANKRUPT**) | `3.5 / 10.0 Coins` (**PASS**) | **Within Budget** |
+
+---
+
+## 📊 2. Synthetic Trace & Prompt-Cache Model (`npm run benchmark`)
 
 How much does replacing unbounded full-file reads with `grep` + surgical line-range reads save once you account for fixed system prompts, the token cost of `SKILL.md` itself, and **Anthropic Prompt Caching**?
 
