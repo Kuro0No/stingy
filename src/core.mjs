@@ -46,15 +46,25 @@ export function estimateTokensFromChars(charCount) {
  * Note: An `offset` without `limit` or `EndLine` does NOT bound the read length (reads up to EOF / 2,000 lines),
  * so it returns `null` to defer to actual `tool_result` line count or full-file classification.
  */
+function toFiniteNumber(val) {
+  if (typeof val === 'number' && Number.isFinite(val)) return val;
+  if (typeof val === 'string' && val.trim() !== '') {
+    const cleaned = val.trim().replace(/^"+|"+$/g, '');
+    const num = Number(cleaned);
+    if (Number.isFinite(num)) return num;
+  }
+  return null;
+}
+
 export function getReadLineSpan(args = {}) {
-  const start = args.startLine ?? args.StartLine ?? args.start_line;
-  const end = args.endLine ?? args.EndLine ?? args.end_line;
-  if (typeof start === 'number' && typeof end === 'number' && end >= start) {
+  const start = toFiniteNumber(args.startLine ?? args.StartLine ?? args.start_line);
+  const end = toFiniteNumber(args.endLine ?? args.EndLine ?? args.end_line);
+  if (start !== null && end !== null && end >= start) {
     return end - start + 1;
   }
 
-  const limit = args.limit ?? args.maxLines ?? args.max_lines;
-  if (typeof limit === 'number' && limit > 0) {
+  const limit = toFiniteNumber(args.limit ?? args.maxLines ?? args.max_lines);
+  if (limit !== null && limit > 0) {
     return limit;
   }
 
