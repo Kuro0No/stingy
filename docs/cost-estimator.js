@@ -3,6 +3,7 @@ const workloads = {
   // benchmarks/codex-comparison.md (subtract cached tokens from reported input)
   codex: {
     source: 'https://github.com/Kuro0No/stingy/blob/main/benchmarks/codex-comparison.md',
+    model: 'Codex · GPT-6.1 Sol',
     rows: [
       ['No skill', 45619, 144128, 1481],
       ['Caveman', 30096, 168448, 1350],
@@ -14,6 +15,7 @@ const workloads = {
   // npm run benchmark:plugins
   bugHunt: {
     source: '#live-benchmark',
+    model: 'Antigravity · Gemini 4 Argon High',
     rows: [
       ['No skill', 142542, 200806, 2186],
       ['Caveman', 143267, 311150, 2450],
@@ -29,12 +31,22 @@ const featureRows = [
   ['Stingy Build', 19510, 31963, 2024]
 ];
 
-// API Standard text rates in USD per million tokens.
+// Published API text rates in USD per million tokens. The Gemini presets
+// expose both the introductory rates and the published post-promotion rates.
 const presets = {
   sol: [2, 0.1, 10],
   astra: [10, 1, 50],
   terra: [1, 0.05, 5],
-  luna: [0.1, 0.01, 0.5]
+  luna: [0.1, 0.01, 0.5],
+  fable: [10, 0.25, 50],
+  opus: [4, 0.2, 20],
+  sonnet: [2, 0.1, 10],
+  haiku: [0.1, 0.01, 0.5],
+  haikuLong: [0.5, 0.05, 2.5],
+  argonIntro: [2, 0.1, 10],
+  argon: [4, 0.2, 20],
+  flashIntro: [0.75, 0.075, 3.75],
+  flash: [1.5, 0.15, 7.5]
 };
 
 const runs = document.getElementById('cost-runs');
@@ -43,6 +55,7 @@ const model = document.getElementById('cost-model');
 const rates = ['rate-input', 'rate-cached', 'rate-output'].map((id) => document.getElementById(id));
 const workload = document.getElementById('cost-workload');
 const source = document.getElementById('cost-bug-source');
+const recordedModel = document.getElementById('cost-bug-model');
 const status = document.getElementById('cost-status');
 const bugRows = document.getElementById('cost-bug-rows');
 const whiteboardRows = document.getElementById('cost-feature-rows');
@@ -60,13 +73,13 @@ function showSavings(element, savings) {
   else element.textContent = 'No change';
 }
 
+function costUnits([, input, cached, output], [inputRate, cacheRate, outputRate], repeats) {
+  const monthlyUsd = repeats * (input * inputRate + cached * cacheRate + output * outputRate) / 1000000;
+  return Math.round(monthlyUsd * unitsPerDollar);
+}
+
 function renderCosts(tableBody, rows, prices, repeats, highlight) {
-  const costs = rows.map(([, input, cached, output]) => {
-    if (prices === null) return null;
-    const [inputRate, cacheRate, outputRate] = prices;
-    const monthlyUsd = repeats * (input * inputRate + cached * cacheRate + output * outputRate) / 1000000;
-    return Math.round(monthlyUsd * unitsPerDollar);
-  });
+  const costs = rows.map((row) => prices === null ? null : costUnits(row, prices, repeats));
   const control = costs[0];
   const featuredIndex = rows.length - 1;
   const elements = rows.map(([label], index) => {
@@ -93,6 +106,15 @@ function renderCosts(tableBody, rows, prices, repeats, highlight) {
   tableBody.replaceChildren(...elements);
 }
 
+function renderProviderSavings(bugFixes, repeats) {
+  for (const [provider, rates] of [['openai', presets.sol], ['claude', presets.opus], ['gemini', presets.flashIntro]]) {
+    for (const [work, rows] of [['bugs', bugFixes], ['build', featureRows]]) {
+      const savings = costUnits(rows[0], rates, repeats) - costUnits(rows.at(-1), rates, repeats);
+      showSavings(document.getElementById(`cost-${provider}-${work}`), savings);
+    }
+  }
+}
+
 function updateCosts() {
   const repeats = runs.valueAsNumber;
   const prices = rates.every((field) => field.validity.valid) ? rates.map((field) => field.valueAsNumber) : null;
@@ -101,8 +123,10 @@ function updateCosts() {
   status.textContent = prices === null ? 'Enter a valid rate in all three price fields.' : '';
   const bugFixes = workloads[workload.value];
   source.href = bugFixes.source;
+  recordedModel.textContent = bugFixes.model;
   renderCosts(bugRows, bugFixes.rows, prices, repeats, stingySavings);
   renderCosts(whiteboardRows, featureRows, prices, repeats, buildSavings);
+  renderProviderSavings(bugFixes.rows, repeats);
 }
 
 model.addEventListener('change', () => {

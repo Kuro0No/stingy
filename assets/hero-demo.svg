@@ -77,13 +77,13 @@
     <text x="496" y="108" class="c-dim">Input (including cache) + output</text>
     <text x="496" y="128" class="c-dim">Full track = control · Green = Stingy</text>
 
-    <text x="496" y="160" class="c-white">3,100-line bug hunt</text>
+    <text x="496" y="160" class="c-white">3,100-line bug hunt · Gemini 4 Argon</text>
     <text x="876" y="160" class="c-green" text-anchor="end">−83.89%</text>
     <rect x="496" y="171" width="380" height="10" rx="3" fill="#30363D"/>
     <rect x="496" y="171" width="61" height="10" rx="3" fill="#3FB950"/>
     <text x="496" y="201" class="c-dim">345,534 → 55,671 tokens · Scrooge</text>
 
-    <text x="496" y="230" class="c-white">CRDT whiteboard feature</text>
+    <text x="496" y="230" class="c-white">CRDT whiteboard · Gemini 4 Argon</text>
     <text x="876" y="230" class="c-green" text-anchor="end">−84.85%</text>
     <rect x="496" y="241" width="380" height="10" rx="3" fill="#30363D"/>
     <rect x="496" y="241" width="58" height="10" rx="3" fill="#3FB950"/>

@@ -343,7 +343,7 @@
     .cost-layout { grid-template-columns: minmax(240px, 0.9fr) minmax(0, 2.5fr); }
     .cost-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
-    #roast-generator {
+    #roast-generator, #provider-usage {
       scroll-margin-top: 100px;
     }
 
@@ -422,6 +422,10 @@
       color: var(--muted);
       margin-top: 12px;
     }
+
+    .cost-provider-comparison { margin-top: 16px; }
+    .cost-provider-comparison summary { cursor: pointer; font-weight: 700; }
+    .cost-provider-comparison .cost-table { margin-top: 10px; }
 
     .skills-panel {
       max-width: 800px;
@@ -516,7 +520,7 @@
       .header__inner { height: auto; min-height: 66px; padding-block: 8px; flex-wrap: wrap; gap: 8px; }
       .header__right { flex-wrap: wrap; gap: 6px; }
       .header__right .btn { padding: 6px 9px; font-size: 0.72rem; }
-      #roast-generator { scroll-margin-top: 150px; }
+      #roast-generator, #provider-usage { scroll-margin-top: 150px; }
     }
 
     @media (max-width: 520px) {
@@ -641,7 +645,7 @@
         <div class="section__head">
           <span class="eyebrow">[ 01 — API COST COMPARISON ]</span>
           <h2 class="section__title">What would the same work cost?</h2>
-          <p>Apply one set of API rates to the recorded token counts and compare costs in USD.</p>
+          <p>Price the recorded token counts with OpenAI, Claude, or Gemini API rates. The rate choice changes the USD estimate.</p>
         </div>
 
         <div class="cost-layout">
@@ -664,10 +668,25 @@
             </select>
             <label for="cost-model">API rate preset</label>
             <select id="cost-model">
-              <option value="sol">GPT-6.1 Sol · Standard</option>
-              <option value="astra">GPT-6 Astra · Standard</option>
-              <option value="terra">GPT-6.1 Terra · Standard</option>
-              <option value="luna">GPT-6 Luna · Standard</option>
+              <optgroup label="OpenAI">
+                <option value="sol">GPT-6.1 Sol · Standard</option>
+                <option value="astra">GPT-6 Astra · Standard</option>
+                <option value="terra">GPT-6.1 Terra · Standard</option>
+                <option value="luna">GPT-6 Luna · Standard</option>
+              </optgroup>
+              <optgroup label="Anthropic">
+                <option value="fable">Claude Fable 5.1</option>
+                <option value="opus">Claude Opus 5.5</option>
+                <option value="sonnet">Claude Sonnet 5.5</option>
+                <option value="haiku">Claude Haiku 5.5 · ≤100k input</option>
+                <option value="haikuLong">Claude Haiku 5.5 · &gt;100k input</option>
+              </optgroup>
+              <optgroup label="Google">
+                <option value="argonIntro">Gemini 4 Argon · through Nov 30, 2026</option>
+                <option value="argon">Gemini 4 Argon · from Dec 1, 2026</option>
+                <option value="flashIntro">Gemini 3.8 Flash · through Dec 31, 2026</option>
+                <option value="flash">Gemini 3.8 Flash · from Jan 1, 2027</option>
+              </optgroup>
               <option value="custom">Custom rates</option>
             </select>
             <div class="cost-rates">
@@ -684,7 +703,7 @@
                 <input type="number" id="rate-output" value="10" min="0" max="1000000" step="any" required />
               </div>
             </div>
-            <p class="cost-note">Rates are USD per million tokens. <a href="https://developers.openai.com/api/docs/pricing">OpenAI API pricing</a>.</p>
+            <p class="cost-note">USD per million tokens. Official rates from <a href="https://developers.openai.com/api/docs/pricing">OpenAI</a>, <a href="https://platform.claude.com/docs/en/about-claude/pricing">Anthropic</a>, and <a href="https://ai.google.dev/gemini-api/docs/pricing">Google</a>.</p>
             <p id="cost-status" role="status" hidden></p>
           </div>
 
@@ -695,7 +714,7 @@
                 <thead><tr><th scope="col">Configuration</th><th scope="col">Est. cost</th><th scope="col">vs. control</th></tr></thead>
                 <tbody id="cost-bug-rows"></tbody>
               </table>
-              <p class="cost-note"><a id="cost-bug-source" href="https://github.com/Kuro0No/stingy/blob/main/benchmarks/codex-comparison.md">Recorded benchmark data</a></p>
+              <p class="cost-note">Recorded run · <strong id="cost-bug-model">Codex · GPT-6.1 Sol</strong>. <a id="cost-bug-source" href="https://github.com/Kuro0No/stingy/blob/main/benchmarks/codex-comparison.md">Benchmark data</a>.</p>
             </div>
             <div class="panel cost-panel">
               <table class="cost-table">
@@ -703,11 +722,24 @@
                 <thead><tr><th scope="col">Configuration</th><th scope="col">Est. cost</th><th scope="col">vs. control</th></tr></thead>
                 <tbody id="cost-feature-rows"></tbody>
               </table>
-              <p class="cost-note">This feature benchmark used the original <code>/stingy-lite</code> name for Stingy Build and has its own no-skill control. <a href="https://github.com/Kuro0No/stingy#-case-study-2-complex-feature-building-with-stingy-lite-realtime-crdt-whiteboard">Whiteboard benchmark data</a>.</p>
+              <p class="cost-note">Recorded run · <strong>Gemini 4 Argon Medium</strong> in Antigravity. Stingy Build ran as <code>/stingy-lite</code> with its own no-skill control. <a href="https://github.com/Kuro0No/stingy/blob/main/benchmarks/fixtures/MANIFEST.json">Benchmark manifest</a>.</p>
             </div>
           </div>
         </div>
-        <p class="cost-note">Monthly projections repeat each recorded workload at the selected rates. Estimates include uncached input, cache reads, and output. Cache writes, provider fees, and subscription quotas are outside this calculation.</p>
+        <p class="cost-note">Monthly projections repeat each recorded workload at the selected rates. Estimates include uncached input, cache reads, and output. Cache writes, storage, other fees, and subscription quotas are outside this calculation.</p>
+        <details class="panel cost-panel cost-provider-comparison">
+          <summary>Compare estimated savings at OpenAI, Claude, and Gemini rates</summary>
+          <p class="cost-note">All three prices use the same recorded token counts for each workload.</p>
+          <table class="cost-table" aria-label="Projected savings by API rate">
+            <thead><tr><th scope="col">API rates</th><th scope="col">Bug fixes</th><th scope="col">Whiteboard</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">GPT-6.1 Sol</th><td id="cost-openai-bugs">—</td><td id="cost-openai-build">—</td></tr>
+              <tr><th scope="row">Claude Opus 5.5</th><td id="cost-claude-bugs">—</td><td id="cost-claude-build">—</td></tr>
+              <tr><th scope="row">Gemini 3.8 Flash · 2026 intro</th><td id="cost-gemini-bugs">—</td><td id="cost-gemini-build">—</td></tr>
+            </tbody>
+          </table>
+        </details>
+        <p class="cost-note"><a href="#provider-usage">See the recorded Claude Code usage and local audits by agent</a>.</p>
         <noscript><p>Enable JavaScript to calculate API costs from the recorded benchmarks.</p></noscript>
       </div>
     </section>
@@ -742,10 +774,11 @@
           <h2 class="section__title">How much Stingy saved across three workloads</h2>
           <p>Each comparison adds input, including cached input, to output. Savings varied by workload.</p>
           <ul>
-            <li><strong>3,100-line bug hunt</strong> · 345,534 → 55,671 tokens with Scrooge (<strong>−83.89%</strong>).</li>
-            <li><strong>CRDT whiteboard feature</strong> · 353,105 → 53,497 tokens with Stingy Build, recorded as <code>/stingy-lite</code> (<strong>−84.85%</strong>). <a href="./whiteboard-demo.html">Try the whiteboard demo</a>.</li>
+            <li><strong>3,100-line bug hunt · Gemini 4 Argon High</strong> · 345,534 → 55,671 tokens with Scrooge (<strong>−83.89%</strong>).</li>
+            <li><strong>CRDT whiteboard feature · Gemini 4 Argon Medium</strong> · 353,105 → 53,497 tokens with Stingy Build, recorded as <code>/stingy-lite</code> (<strong>−84.85%</strong>). <a href="./whiteboard-demo.html">Try the whiteboard demo</a>.</li>
             <li><strong>Two Codex bug fixes</strong> · 191,228 → 183,916 tokens with Scrooge (<strong>−3.82%</strong>). Shell output fell from 61,131 to 13,010 bytes (<strong>−78.7%</strong>) and both patches passed. <a href="https://github.com/Kuro0No/stingy/blob/main/benchmarks/codex-comparison.md">See the live comparison with RTK and Context Mode</a>.</li>
           </ul>
+          <p>Separate Gemini 3.8 Flash Medium Whiteboard runs recorded 146,756 tokens with read-only tools and 509,359 with write access. These runs had different tool permissions. <a href="https://github.com/Kuro0No/stingy/blob/main/benchmarks/fixtures/MANIFEST.json">See the benchmark manifest</a>.</p>
           <p>The bug-hunt replay below uses fixed example rates for USD. The static ignore row reuses the baseline trace.</p>
         </div>
 
@@ -831,6 +864,41 @@
           <p style="margin-top: 14px; font-size: 0.84rem; color: var(--muted);">
             Reproduce locally with <code>npm run benchmark:plugins</code>. All 6 recorded JSONL transcripts with hardware LLM token telemetry (<code>input_tokens</code>, <code>cache_read_tokens</code>, <code>output_tokens</code>) are committed in <a href="https://github.com/Kuro0No/stingy/tree/main/benchmarks/fixtures" target="_blank" rel="noopener"><code>benchmarks/fixtures/</code></a>.
           </p>
+        </div>
+      </div>
+    </section>
+    <section class="section" id="provider-usage">
+      <div class="container">
+        <div class="section__head">
+          <span class="eyebrow">[ 04 — RECORDED SESSION USAGE ]</span>
+          <h2 class="section__title">Claude usage and local audits</h2>
+        </div>
+        <div class="cost-grid">
+          <div class="panel cost-panel">
+            <table class="cost-table">
+              <caption>One Claude Code session</caption>
+              <thead><tr><th scope="col">Model</th><th scope="col">Tokens</th><th scope="col">CLI est. USD</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Sonnet 5.5</th><td>5,845,565</td><td>$1.448</td></tr>
+                <tr><th scope="row">Opus 5</th><td>1,387,985</td><td>$1.553</td></tr>
+                <tr><th scope="row">Haiku 5.5</th><td>101,852</td><td>$0.034</td></tr>
+              </tbody>
+              <tfoot><tr><th scope="row">Total</th><td>7,335,402</td><td>$3.035</td></tr></tfoot>
+            </table>
+            <p class="cost-note">Repricing the 39 Sonnet requests at the same token counts gives <strong>$2.896</strong> for Opus 5.5 and <strong>$0.362</strong> for Haiku 5.5 at its over-100k input tier. <a href="https://github.com/Kuro0No/stingy/blob/main/benchmarks/claude-session-costs.md">Session totals and calculation</a>.</p>
+          </div>
+          <div class="panel cost-panel">
+            <table class="cost-table">
+              <caption>Local Roast snapshot · Nov 6, 2026</caption>
+              <thead><tr><th scope="col">Agent</th><th scope="col">Logs</th><th scope="col">Est. wasted tokens</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Claude Code</th><td>25</td><td>953,260 (24.7%)</td></tr>
+                <tr><th scope="row">Antigravity</th><td>25</td><td>121,916 (33.3%)</td></tr>
+                <tr><th scope="row">Codex</th><td>14</td><td>431,757 (1.7%)</td></tr>
+              </tbody>
+            </table>
+            <p class="cost-note">Each row audits a different set of local transcripts. These are estimates of avoidable tool context from Roast.</p>
+          </div>
         </div>
       </div>
     </section>

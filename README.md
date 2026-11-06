@@ -12,13 +12,13 @@ The receipt uses the [public sample transcript](./benchmarks/fixtures/sample-ses
 
 | Workload | Control | With Stingy | Fewer tokens |
 | :--- | ---: | ---: | ---: |
-| [3,100-line bug hunt](#-multi-plugin-live-telemetry-comparison-npm-run-benchmarkplugins), Scrooge | 345,534 | 55,671 | **83.89%** |
-| [CRDT whiteboard feature](#-case-study-2-complex-feature-building-with-stingy-lite-realtime-crdt-whiteboard), Stingy Build | 353,105 | 53,497 | **84.85%** |
-| [Two Codex bug fixes](./benchmarks/codex-comparison.md), Scrooge | 191,228 | 183,916 | **3.82%** |
+| [3,100-line bug hunt](#-multi-plugin-live-telemetry-comparison-npm-run-benchmarkplugins) · Gemini 4 Argon High | 345,534 | 55,671 | **83.89%** |
+| [CRDT whiteboard feature](#-case-study-2-complex-feature-building-with-stingy-lite-realtime-crdt-whiteboard) · Gemini 4 Argon Medium | 353,105 | 53,497 | **84.85%** |
+| [Two Codex bug fixes](./benchmarks/codex-comparison.md) · GPT-6.1 Sol | 191,228 | 183,916 | **3.82%** |
 
 On the two Codex bug fixes, shell output fell from **61,131 to 13,010 bytes (78.7%)** and both patches passed their tests. Token savings varied by workload.
 
-The [API cost calculator](https://kuro0no.github.io/stingy/#roast-generator) prices the recorded token counts using a selected rate and monthly workload. It compares Stingy, Caveman, and Ponytail on bug fixes and compares Stingy Build with its own Whiteboard control.
+The [API cost calculator](https://kuro0no.github.io/stingy/#roast-generator) applies OpenAI, Claude, Gemini, or custom API rates to the recorded token counts. See the [benchmark manifest](./benchmarks/fixtures/MANIFEST.json) for model IDs and the [Claude Code session summary](./benchmarks/claude-session-costs.md) for observed usage by model and a same-token cost comparison.
 
 <p align="center">
   <a href="#license"><img src="https://img.shields.io/badge/License-MIT-black.svg" alt="License: MIT" /></a>
@@ -74,7 +74,7 @@ git clone https://github.com/Kuro0No/stingy.git ~/.gemini/config/plugins/stingy
 
 **Caveman** targets verbose prose. **Ponytail** targets overbuilt code. **Stingy** budgets how agents gather context and use tools (`grep` before `read`, `StartLine`/`EndLine` ≤ 120 lines, zero duplicate reads).
 
-Six recorded agent runs used the same 3-file bug-hunt task. The static ignore row reuses the baseline trace. The replay applies a fixed example rate of $3 uncached input, $0.30 cached input, and $15 output per million tokens. The separate [live Codex comparison](./benchmarks/codex-comparison.md) measures test-verified code changes with RTK and Context Mode as well as the three skills.
+Six Gemini 4 Argon High runs in Antigravity used the same 3-file bug-hunt task. The static ignore row reuses the baseline trace. The replay applies a fixed example rate of $3 uncached input, $0.30 cached input, and $15 output per million tokens. The separate [live Codex comparison](./benchmarks/codex-comparison.md) measures test-verified code changes with RTK and Context Mode as well as the three skills.
 
 ```bash
 npm run benchmark:plugins
@@ -118,7 +118,7 @@ node ./bin/stingy.mjs roast ./benchmarks/fixtures/live-ab-stingy.jsonl
 
 ## 🎨 Case Study #2: Complex Feature Building with `/stingy-lite` (Realtime CRDT Whiteboard)
 
-This benchmark used the feature skill under its original name, `/stingy-lite`. For new work, use [`/stingy-build`](./skills/stingy-build/SKILL.md).
+The manifest and paired transcripts identify **Gemini 4 Argon Medium** in Antigravity. The treatment used the original `/stingy-lite` command. For new work, use [`/stingy-build`](./skills/stingy-build/SKILL.md).
 
 What happens when you are **building a complex multi-file feature** instead of hunting bugs? We tested `/stingy-lite` (**12-Coin Feature-Build Budget**, [`skills/stingy-lite/SKILL.md`](./skills/stingy-lite/SKILL.md)) against a Default Baseline Agent on a **2,300-line Realtime Collaborative Whiteboard codebase** (`state-crdt.ts`, `canvas-engine.ts`, `ws-client.ts`), tasking both agents with implementing **Multi-Peer Conflict-Free CRDT Undo/Redo (`undo`, `redo`) + Spatial Dirty Bounding-Box Invalidation (`computeDirtyBounds`)**:
 
@@ -130,8 +130,12 @@ What happens when you are **building a complex multi-file feature** instead of h
 | **Uncached Hardware Input Tokens** | `98,333 tok` | **`19,510 tok`** | **-80.2%** |
 | **Cached Input Tokens** | `250,256 tok` | **`31,963 tok`** | **-87.2%** |
 | **Output Tokens (Report Length)** | `4,516 tok` (`12,903 chars`) | **`2,024 tok` (`4,458 chars`)** | **-55.2% Output Tok (-65.5% Chars)** |
-| **Modeled USD (same example rates)** | `$0.4378` | **`$0.0985`** | **-77.5% modeled cost** |
+| **Modeled USD (Gemini 4 Argon intro rates)** | `$0.2669` | **`$0.0625`** | **-76.6% modeled cost** |
 | **Coin Budget Score** | `16.0 / 12.0` (**OVER BUDGET**) | **`3.5 / 12.0 Coins`** (**PASS**) | **Within Budget** |
+
+The USD row uses Gemini 4 Argon introductory API rates through November 30, 2026. [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing#gemini-4-argon)
+
+The [Gemini 3.8 Flash Medium traces](./benchmarks/fixtures/MANIFEST.json) recorded 146,756 tokens in the read-only run and 509,359 in the read-write run. Their tool permissions differed, so they provide usage examples outside the savings comparison.
 
 ---
 
@@ -233,6 +237,16 @@ node ./bin/stingy.mjs roast --source codex
 # Reproduce with the bundled sample session fixture in this repo:
 node ./bin/stingy.mjs roast ./benchmarks/fixtures/sample-session.jsonl
 ```
+
+### Local Roast snapshot
+
+On November 6, 2026, Roast estimated the following tool-context waste on local transcripts. Each agent has its own set of sessions.
+
+| Agent | Logs | Estimated tool-context tokens | Estimated wasted tokens |
+| :--- | ---: | ---: | ---: |
+| Claude Code | 25 | 3,860,659 | 953,260 (24.7%) |
+| Antigravity | 25 | 366,384 | 121,916 (33.3%) |
+| Codex | 14 | 24,699,617 | 431,757 (1.7%) |
 
 ## Agent Usage and Estimated Cost (`stingy usage`)
 
