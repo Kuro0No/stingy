@@ -431,7 +431,7 @@ test('Codex Round-3 Regression #5: stingy init from a directory path containing 
     fs.mkdirSync(workDir, { recursive: true });
 
     fs.copyFileSync(path.join(REPO_ROOT, 'bin', 'stingy.mjs'), path.join(binDir, 'stingy.mjs'));
-    for (const module of ['core.mjs', 'transcripts.mjs', 'usage.mjs']) {
+    for (const module of ['core.mjs', 'transcripts.mjs', 'usage.mjs', 'hook.mjs', 'export-image.mjs']) {
       fs.copyFileSync(path.join(REPO_ROOT, 'src', module), path.join(srcDir, module));
     }
     fs.copyFileSync(path.join(REPO_ROOT, 'skills', 'stingy', 'SKILL.md'), path.join(skillDir, 'SKILL.md'));

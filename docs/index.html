@@ -629,9 +629,15 @@
               Run <code>stingy roast</code> for your session's 10-coin score.
             </div>
 
-            <div style="margin-top: 14px; display: flex; gap: 8px;">
-              <button type="button" class="btn" style="width: 100%;" id="copy-receipt-btn">
+            <div style="margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" class="btn" style="flex: 2;" id="copy-receipt-btn">
                 COPY SAMPLE RECEIPT
+              </button>
+              <button type="button" class="btn btn--outline" style="flex: 1;" id="download-svg-btn">
+                ⬇ SVG
+              </button>
+              <button type="button" class="btn btn--outline" style="flex: 1;" id="download-png-btn">
+                ⬇ PNG
               </button>
             </div>
           </div>
@@ -950,6 +956,68 @@
       navigator.clipboard?.writeText(ascii);
       copyReceiptBtn.textContent = '✓ COPIED ASCII RECEIPT!';
       setTimeout(() => (copyReceiptBtn.textContent = 'COPY SAMPLE RECEIPT'), 2000);
+    });
+
+    function buildSampleSvgString() {
+      const reads = document.getElementById('rc-reads').textContent;
+      const dups = document.getElementById('rc-duplicates').textContent;
+      const retries = document.getElementById('rc-retries').textContent;
+      const rage = document.getElementById('rc-rage').textContent;
+      const waste = document.getElementById('rc-waste').textContent;
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="440" viewBox="0 0 560 440">
+  <rect width="560" height="440" fill="#141413"/>
+  <rect x="28" y="28" width="504" height="384" fill="#D9381E"/>
+  <rect x="20" y="20" width="504" height="384" fill="#FAF9F5" stroke="#111110" stroke-width="2.5"/>
+  <text x="272" y="64" fill="#111110" font-family="monospace" font-size="19" font-weight="800" text-anchor="middle">STINGY TOKEN AUTOPSY</text>
+  <text x="272" y="88" fill="#5C5A54" font-family="monospace" font-size="12" text-anchor="middle">"Why burn 50k tokens when 400 do?"</text>
+  <line x1="44" y1="108" x2="500" y2="108" stroke="#111110" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="48" y="144" fill="#111110" font-family="monospace" font-size="14">Full-File Reads (No Line Range)</text>
+  <text x="496" y="144" fill="#D9381E" font-family="monospace" font-size="14" font-weight="700" text-anchor="end">${reads}</text>
+  <text x="48" y="180" fill="#111110" font-family="monospace" font-size="14">Duplicate File Re-Reads</text>
+  <text x="496" y="180" fill="#D9381E" font-family="monospace" font-size="14" font-weight="700" text-anchor="end">${dups}</text>
+  <text x="48" y="216" fill="#111110" font-family="monospace" font-size="14">Blind Command Retry Loops</text>
+  <text x="496" y="216" fill="#D9381E" font-family="monospace" font-size="14" font-weight="700" text-anchor="end">${retries}</text>
+  <text x="48" y="252" fill="#111110" font-family="monospace" font-size="14">Rage Prompts ("wrong / fix it")</text>
+  <text x="496" y="252" fill="#D9381E" font-family="monospace" font-size="14" font-weight="700" text-anchor="end">${rage}</text>
+  <line x1="44" y1="278" x2="500" y2="278" stroke="#111110" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="48" y="314" fill="#D9381E" font-family="monospace" font-size="16" font-weight="800">EST. WASTED TOKENS</text>
+  <text x="496" y="314" fill="#D9381E" font-family="monospace" font-size="16" font-weight="800" text-anchor="end">${waste}</text>
+  <rect x="48" y="336" width="448" height="40" fill="#141413"/>
+  <text x="272" y="361" fill="#FAF9F5" font-family="monospace" font-size="12" font-weight="700" text-anchor="middle">npx github:Kuro0No/stingy roast --svg --png</text>
+</svg>`;
+    }
+
+    document.getElementById('download-svg-btn')?.addEventListener('click', () => {
+      const svg = buildSampleSvgString();
+      const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'stingy-receipt.svg';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('download-png-btn')?.addEventListener('click', () => {
+      const svg = buildSampleSvgString();
+      const img = new Image();
+      const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1120;
+        canvas.height = 880;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(2, 2);
+        ctx.drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = 'stingy-receipt.png';
+        a.click();
+      };
+      img.src = url;
     });
 
     const skillSummaries = {

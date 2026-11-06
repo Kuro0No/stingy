@@ -156,10 +156,12 @@ The [Gemini 3.8 Flash Medium traces](./benchmarks/fixtures/MANIFEST.json) record
 | CLI Command | Description |
 | :--- | :--- |
 | `npx github:Kuro0No/stingy roast [path]` | Scans local transcripts (`~/.claude`, `~/.gemini`, `~/.codex`, `~/.copilot`, etc.) and prints the ASCII Token Autopsy Receipt. |
+| `npx github:Kuro0No/stingy roast --svg [out.svg] --png [out.png]` | Exports your Token Autopsy Receipt as a shareable vector `.svg` card and/or lossless `.png` image (zero dependencies). |
 | `npx github:Kuro0No/stingy roast --source <agent>` | Filters `roast` by agent (`claude`, `antigravity`, `codex`, `gemini`, `copilot`, `pi`, `openclaw`). |
 | `npx github:Kuro0No/stingy usage [source]` | Summarizes logged input/output/cache token bills across 18 agent sources via `ccusage`. |
-| `npx github:Kuro0No/stingy init [--mode lite\|strict\|scrooge]` | Installs `stingy` and `stingy-build` under `.claude/skills/` and `.agents/skills/`. `--mode` selects the suggested `/stingy` invocation. |
-| `npx github:Kuro0No/stingy audit` | Prints a JSON summary of your local transcript token & coin metrics for CI or scripts. |
+| `npx github:Kuro0No/stingy init [--hook] [--mode lite\|strict\|scrooge]` | Installs `stingy` and `stingy-build` under `.claude/skills/` and `.agents/skills/`. Pass `--hook` to also install the hard-enforcement `PreToolUse` hook into `.claude/settings.json`. |
+| `npx github:Kuro0No/stingy hook` | Evaluates a `PreToolUse` JSON event on `stdin` and blocks unbounded full-file reads (`> 250 lines`) or lockfiles before they enter context. |
+| `npx github:Kuro0No/stingy audit [dir]` | Scans a repository for oversized "Token Black Hole" files (`> 12 KB`). |
 
 ---
 

@@ -15,6 +15,8 @@ import { fileURLToPath } from 'node:url';
 import { analyzeJsonlLines } from '../src/core.mjs';
 import { findLocalLogs, readTranscript, ROAST_SOURCES } from '../src/transcripts.mjs';
 import { readUsageReport, USAGE_SOURCES } from '../src/usage.mjs';
+import { evaluatePreToolHook, formatHookResponse, installPreToolHook } from '../src/hook.mjs';
+import { renderReceiptSvg, renderReceiptPng } from '../src/export-image.mjs';
 
 export { findLocalLogs };
 
@@ -55,6 +57,13 @@ function reportArguments(allowed) {
     const key = arg.slice(2);
     if (allowed[arg] === 'flag') {
       options[key] = true;
+    } else if (allowed[arg] === 'optional-value') {
+      const next = args[i + 1];
+      if (next && !next.startsWith('-') && !/\.(jsonl|json)$/i.test(next)) {
+        options[key] = args[++i];
+      } else {
+        options[key] = true;
+      }
     } else {
       const value = args[++i];
       if (!value || value.startsWith('--')) throw new Error(`${arg} requires a value.`);
@@ -109,7 +118,11 @@ function runUsage() {
  * Run the Honest Token Autopsy Receipt on real JSONL transcripts.
  */
 function runRoast() {
-  const { target: customPath, source } = reportArguments({ '--source': 'value' });
+  const { target: customPath, source, svg, png } = reportArguments({
+    '--source': 'value',
+    '--svg': 'optional-value',
+    '--png': 'optional-value'
+  });
   if (source && !ROAST_SOURCES.includes(source)) {
     const usageHint = USAGE_SOURCES.includes(source) ? ` For usage totals, run stingy usage ${source}.` : '';
     throw new Error(`Transcript sources are ${ROAST_SOURCES.join(', ')}.${usageHint}`);
@@ -218,6 +231,48 @@ function runRoast() {
   console.log(`  | ${C.cyan}${C.bold}${padRight(diagnosis, 45)}${C.reset} |`);
   console.log(`${C.yellow}${C.bold}  =================================================${C.reset}`);
   console.log('  Estimated waste is in tokens. For usage and model-based estimates, run stingy usage.');
+
+  const receiptData = {
+    filesCount: sessionList.length,
+    totalSteps: s.totalSteps,
+    readWasteLabel,
+    readWasteCount,
+    readWastedTokens: s.readWastedTokens,
+    duplicateReads: s.duplicateReads,
+    dupReadWastedTokens: s.dupReadWastedTokens,
+    commandRetries: s.commandRetries,
+    retryWastedTokens: s.retryWastedTokens,
+    rageMessages: s.rageMessages,
+    rageWastedTokens: s.rageWastedTokens,
+    surgicalReads: s.surgicalReads,
+    grepCalls: s.grepCalls,
+    avgTurnCoins: s.avgTurnCoins,
+    bankruptTurns: s.bankruptTurns,
+    totalTurnsScored: s.totalTurnsScored,
+    totalTokens: s.totalTokens,
+    wastedTokens: s.wastedTokens,
+    savingsPct: s.savingsPct,
+    diagnosis
+  };
+
+  if (svg) {
+    const svgPath = path.resolve(
+      process.cwd(),
+      typeof svg === 'string' ? svg : 'stingy-receipt.svg'
+    );
+    fs.writeFileSync(svgPath, renderReceiptSvg(receiptData), 'utf8');
+    console.log(`  ${C.green}✓ Saved SVG receipt:${C.reset} ${svgPath}`);
+  }
+
+  if (png) {
+    const pngPath = path.resolve(
+      process.cwd(),
+      typeof png === 'string' ? png : 'stingy-receipt.png'
+    );
+    fs.writeFileSync(pngPath, renderReceiptPng(receiptData));
+    console.log(`  ${C.green}✓ Saved PNG receipt:${C.reset} ${pngPath}`);
+  }
+
   console.log('');
 }
 
@@ -320,6 +375,30 @@ function runInit() {
   }
   console.log(`  ${C.dim}General mode:${C.reset} ${C.yellow}/stingy ${mode}${C.reset}`);
   if (hasFeatureSkill) console.log(`  ${C.dim}Feature-building mode:${C.reset} ${C.yellow}/${featureSkillName}${C.reset}`);
+
+  if (args.includes('--hook')) {
+    const { hookScriptPath, settingsPath } = installPreToolHook(process.cwd());
+    console.log(`  ${C.dim}Installed PreToolUse Hook:${C.reset} ${hookScriptPath}`);
+    console.log(`  ${C.dim}Updated Hook Config:${C.reset} ${settingsPath}`);
+  }
+}
+
+function runHook() {
+  let raw = '';
+  try {
+    raw = fs.readFileSync(0, 'utf8');
+  } catch {
+    return;
+  }
+  if (!raw.trim()) return;
+  let event = {};
+  try {
+    event = JSON.parse(raw);
+  } catch {
+    return;
+  }
+  const result = evaluatePreToolHook(event);
+  process.stdout.write(JSON.stringify(formatHookResponse(result)) + '\n');
 }
 
 if (command === 'roast' || command === 'usage') {
@@ -334,14 +413,17 @@ if (command === 'roast' || command === 'usage') {
   runAudit(args[1] || process.cwd());
 } else if (command === 'init') {
   runInit();
+} else if (command === 'hook') {
+  runHook();
 } else {
   console.log(`
 ${C.yellow}${C.bold}🪙 stingy${C.reset} — Roast tool waste and tally local agent usage.
 
 ${C.bold}Usage:${C.reset}
-  npx github:Kuro0No/stingy roast [path] [--source agent]
+  npx github:Kuro0No/stingy roast [path] [--source agent] [--svg out.svg] [--png out.png]
   npx github:Kuro0No/stingy usage [agent] [--from report.json] [--json]
   npx github:Kuro0No/stingy audit [dir]        ${C.dim}# Scan repo for Token Black Hole files${C.reset}
-  npx github:Kuro0No/stingy init              ${C.dim}# Install /stingy and /stingy-build${C.reset}
+  npx github:Kuro0No/stingy init [--hook]      ${C.dim}# Install /stingy skills & optional PreToolUse hook${C.reset}
+  npx github:Kuro0No/stingy hook               ${C.dim}# Evaluate PreToolUse JSON event on stdin${C.reset}
 `);
 }

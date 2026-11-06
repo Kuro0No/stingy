@@ -13,6 +13,8 @@ import {
   isForbiddenPath,
   scoreToolAction
 } from '../src/core.mjs';
+import { evaluatePreToolHook } from '../src/hook.mjs';
+import { renderReceiptSvg, renderReceiptPng } from '../src/export-image.mjs';
 
 const REPO_ROOT = fileURLToPath(new URL('../', import.meta.url));
 const CLI_PATH = path.join(REPO_ROOT, 'bin', 'stingy.mjs');
@@ -191,4 +193,110 @@ test('ISTQB UAT & Functional Test: Whiteboard CRDT engine in docs/whiteboard-dem
   const conflictUndo = sm.undo('peer-alice');
   assert.equal(conflictUndo.conflictSkipped, true);
   assert.equal(sm.elements.get('el-1').x, 50);
+});
+
+// ============================================================================
+// 5. PRE-TOOL HOOK HARD ENFORCEMENT TESTS (`stingy hook` & `stingy init --hook`)
+// ============================================================================
+test('Pre-Tool Hook: blocks lockfiles, blocks unbounded >250-line reads, blocks cat bypass, and allows surgical reads', () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'stingy-hook-test-'));
+  try {
+    const bigFile = path.join(tempDir, 'big-service.ts');
+    fs.writeFileSync(bigFile, 'export const line = 1;\n'.repeat(400), 'utf8');
+
+    // 1. Forbidden path is blocked
+    const lockRes = evaluatePreToolHook(
+      { tool_name: 'Read', tool_input: { file_path: 'package-lock.json' } },
+      { cwd: tempDir }
+    );
+    assert.equal(lockRes.allowed, false);
+    assert.equal(lockRes.code, 'FORBIDDEN_PATH');
+
+    // 2. Unbounded full read on 400-line file is blocked
+    const fullRes = evaluatePreToolHook(
+      { tool_name: 'Read', tool_input: { file_path: bigFile } },
+      { cwd: tempDir }
+    );
+    assert.equal(fullRes.allowed, false);
+    assert.equal(fullRes.code, 'UNBOUNDED_FULL_READ');
+
+    // 3. Surgical read (limit: 80) on the same 400-line file is allowed
+    const surgicalRes = evaluatePreToolHook(
+      { tool_name: 'Read', tool_input: { file_path: bigFile, offset: 10, limit: 80 } },
+      { cwd: tempDir }
+    );
+    assert.equal(surgicalRes.allowed, true);
+    assert.equal(surgicalRes.code, 'SURGICAL_READ');
+
+    // 4. Unpiped `cat` shell bypass on 400-line file is blocked, piped `cat | head -n 20` is allowed
+    const catBypass = evaluatePreToolHook(
+      { tool_name: 'Bash', tool_input: { command: `cat "${bigFile}"` } },
+      { cwd: tempDir }
+    );
+    assert.equal(catBypass.allowed, false);
+    assert.equal(catBypass.code, 'SHELL_READ_BYPASS');
+
+    const catPiped = evaluatePreToolHook(
+      { tool_name: 'Bash', tool_input: { command: `cat "${bigFile}" | head -n 20` } },
+      { cwd: tempDir }
+    );
+    assert.equal(catPiped.allowed, true);
+
+    // 5. `stingy init --hook` installs standalone hook script & .claude/settings.json
+    execFileSync(process.execPath, [CLI_PATH, 'init', '--hook'], {
+      cwd: tempDir,
+      encoding: 'utf8'
+    });
+    const installedHook = path.join(tempDir, '.claude', 'hooks', 'stingy-pre-tool.mjs');
+    const installedSettings = path.join(tempDir, '.claude', 'settings.json');
+    assert.equal(fs.existsSync(installedHook), true);
+    assert.equal(fs.existsSync(installedSettings), true);
+
+    const hookStdout = execFileSync(process.execPath, [installedHook], {
+      cwd: tempDir,
+      input: JSON.stringify({ tool_name: 'Read', tool_input: { file_path: bigFile } }),
+      encoding: 'utf8'
+    });
+    const parsedOut = JSON.parse(hookStdout);
+    assert.equal(parsedOut.decision, 'block');
+    assert.equal(parsedOut.hookSpecificOutput.permissionDecision, 'deny');
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+// ============================================================================
+// 6. SVG & PNG RECEIPT EXPORT TESTS (`stingy roast --svg` & `--png`)
+// ============================================================================
+test('SVG & PNG Export: stingy roast --svg and --png generate valid vector SVG and lossless RGBA PNG files', () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'stingy-export-test-'));
+  try {
+    const sampleJsonl = path.join(REPO_ROOT, 'benchmarks', 'fixtures', 'sample-session.jsonl');
+    const outSvg = path.join(tempDir, 'autopsy.svg');
+    const outPng = path.join(tempDir, 'autopsy.png');
+
+    execFileSync(
+      process.execPath,
+      [CLI_PATH, 'roast', sampleJsonl, '--svg', outSvg, '--png', outPng],
+      { cwd: tempDir, encoding: 'utf8' }
+    );
+
+    assert.equal(fs.existsSync(outSvg), true, 'SVG receipt must be created');
+    assert.equal(fs.existsSync(outPng), true, 'PNG receipt must be created');
+
+    const svgText = fs.readFileSync(outSvg, 'utf8');
+    assert.match(svgText, /<svg[^>]+viewBox="0 0 640 700"/);
+    assert.match(svgText, /STINGY TOKEN AUTOPSY/);
+
+    const pngBuf = fs.readFileSync(outPng);
+    // Verify PNG magic signature: 89 50 4E 47 0D 0A 1A 0A
+    assert.deepEqual(
+      [...pngBuf.subarray(0, 8)],
+      [137, 80, 78, 71, 13, 10, 26, 10],
+      'PNG file must start with valid 8-byte PNG signature'
+    );
+    assert.ok(pngBuf.length > 2000, `Expected PNG buffer > 2KB, got ${pngBuf.length} bytes`);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
 });
