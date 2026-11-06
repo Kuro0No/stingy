@@ -13,12 +13,12 @@ The receipt uses the [public sample transcript](./benchmarks/fixtures/sample-ses
 | Workload | Control | With Stingy | Fewer tokens |
 | :--- | ---: | ---: | ---: |
 | [3,100-line bug hunt](#-multi-plugin-live-telemetry-comparison-npm-run-benchmarkplugins), Scrooge | 345,534 | 55,671 | **83.89%** |
-| [CRDT whiteboard feature](#-case-study-2-complex-feature-building-with-stingy-lite-realtime-crdt-whiteboard), `/stingy-lite` | 353,105 | 53,497 | **84.85%** |
+| [CRDT whiteboard feature](#-case-study-2-complex-feature-building-with-stingy-lite-realtime-crdt-whiteboard), Stingy Build | 353,105 | 53,497 | **84.85%** |
 | [Two Codex bug fixes](./benchmarks/codex-comparison.md), Scrooge | 191,228 | 183,916 | **3.82%** |
 
 On the two Codex bug fixes, shell output fell from **61,131 to 13,010 bytes (78.7%)** and both patches passed their tests. Token savings varied by workload.
 
-The [API cost calculator](https://kuro0no.github.io/stingy/#roast-generator) prices the recorded token counts using a selected rate and monthly workload. It compares Stingy, Caveman, and Ponytail on bug fixes and compares Stingy Lite with its own Whiteboard control.
+The [API cost calculator](https://kuro0no.github.io/stingy/#roast-generator) prices the recorded token counts using a selected rate and monthly workload. It compares Stingy, Caveman, and Ponytail on bug fixes and compares Stingy Build with its own Whiteboard control.
 
 <p align="center">
   <a href="#license"><img src="https://img.shields.io/badge/License-MIT-black.svg" alt="License: MIT" /></a>
@@ -30,13 +30,13 @@ The [API cost calculator](https://kuro0no.github.io/stingy/#roast-generator) pri
 
 ## ⚡ Quick Start (1 Command, Zero Dependencies)
 
-Install both project skills under `.claude/skills/` and `.agents/skills/`.
+Install the project skills under `.claude/skills/` and `.agents/skills/`.
 
 ```bash
 npx github:Kuro0No/stingy init
 ```
 
-In chat, use `/stingy-lite` for feature work and multi-file refactors (12 coins). Use `/stingy strict`, `/stingy scrooge`, or `/stingy lite` for the general 10-coin skill.
+In chat, use `/stingy-build` for feature work and multi-file refactors (12 coins). Use `/stingy strict`, `/stingy scrooge`, or `/stingy lite` for the general 10-coin skill. The old `/stingy-lite` command still opens the 12-coin feature skill.
 
 Audit local session logs offline with `roast`. Add `--source codex` to focus on one agent.
 
@@ -54,7 +54,7 @@ npx github:Kuro0No/stingy roast
 /plugin marketplace add Kuro0No/stingy
 /plugin install stingy@stingy
 ```
-*For marketplace installs, use the plugin namespace. The feature skill is `/stingy:stingy-lite`.*
+*For marketplace installs, use the plugin namespace. The feature skill is `/stingy:stingy-build`.*
 
 **Universal Skills CLI:**
 ```bash
@@ -118,6 +118,8 @@ node ./bin/stingy.mjs roast ./benchmarks/fixtures/live-ab-stingy.jsonl
 
 ## 🎨 Case Study #2: Complex Feature Building with `/stingy-lite` (Realtime CRDT Whiteboard)
 
+This benchmark used the feature skill under its original name, `/stingy-lite`. For new work, use [`/stingy-build`](./skills/stingy-build/SKILL.md).
+
 What happens when you are **building a complex multi-file feature** instead of hunting bugs? We tested `/stingy-lite` (**12-Coin Feature-Build Budget**, [`skills/stingy-lite/SKILL.md`](./skills/stingy-lite/SKILL.md)) against a Default Baseline Agent on a **2,300-line Realtime Collaborative Whiteboard codebase** (`state-crdt.ts`, `canvas-engine.ts`, `ws-client.ts`), tasking both agents with implementing **Multi-Peer Conflict-Free CRDT Undo/Redo (`undo`, `redo`) + Spatial Dirty Bounding-Box Invalidation (`computeDirtyBounds`)**:
 
 * 🌐 **Try the Live Interactive CRDT Whiteboard Demo:** **[https://kuro0no.github.io/stingy/whiteboard-demo.html](https://kuro0no.github.io/stingy/whiteboard-demo.html)**
@@ -139,7 +141,7 @@ What happens when you are **building a complex multi-file feature** instead of h
 
 | Slash Command | Turn Budget | Best Used For | Key Rules Enforced |
 | :--- | :---: | :--- | :--- |
-| **`/stingy-lite`** | **12.0 Coins** | **Feature building, UI scaffolding, multi-file refactors** | Targeted search, reads of up to 120 lines, one quiet verification command, and a `STINGY-LITE` receipt. |
+| **`/stingy-build`** (legacy `/stingy-lite`) | **12.0 Coins** | **Feature building, UI scaffolding, multi-file refactors** | Targeted search, reads of up to 120 lines, one quiet verification command, and a `STINGY-BUILD` receipt. |
 | **`/stingy lite`** | **10.0 Coins** | Targeted context gathering | Search first, read up to 120 lines, and batch independent tool calls. Receipt on request. |
 | **`/stingy`** (or `/stingy strict`) | **10.0 Coins** | Daily coding, debugging, PR reviews | Inherits the general lite rules, limits exploratory reads, and adds a coin receipt. |
 | **`/stingy scrooge`** | **10.0 Coins** | Focused bug hunts | Inherits strict rules, avoids speculative calls, plans the patch before editing, and uses a Scrooge receipt. |
@@ -152,7 +154,7 @@ What happens when you are **building a complex multi-file feature** instead of h
 | `npx github:Kuro0No/stingy roast [path]` | Scans local transcripts (`~/.claude`, `~/.gemini`, `~/.codex`, `~/.copilot`, etc.) and prints the ASCII Token Autopsy Receipt. |
 | `npx github:Kuro0No/stingy roast --source <agent>` | Filters `roast` by agent (`claude`, `antigravity`, `codex`, `gemini`, `copilot`, `pi`, `openclaw`). |
 | `npx github:Kuro0No/stingy usage [source]` | Summarizes logged input/output/cache token bills across 18 agent sources via `ccusage`. |
-| `npx github:Kuro0No/stingy init [--mode lite\|strict\|scrooge]` | Installs `stingy` and `stingy-lite` under `.claude/skills/` and `.agents/skills/`. `--mode` selects the suggested `/stingy` invocation. |
+| `npx github:Kuro0No/stingy init [--mode lite\|strict\|scrooge]` | Installs `stingy`, `stingy-build`, and the legacy alias under `.claude/skills/` and `.agents/skills/`. `--mode` selects the suggested `/stingy` invocation. |
 | `npx github:Kuro0No/stingy audit` | Prints a JSON summary of your local transcript token & coin metrics for CI or scripts. |
 
 ---

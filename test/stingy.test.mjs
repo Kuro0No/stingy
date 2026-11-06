@@ -262,7 +262,7 @@ test('ChatGPT Audit Regression #3: Dynamic tool_result sizing treats 1-line Read
   assert.ok(hugeStats.wastedTokens > 10000, `2,000-line read should waste >10,000 tokens (got ${hugeStats.wastedTokens})`);
 });
 
-test('stingy init installs both distinct skill files and prints their activation commands', () => {
+test('stingy init installs Stingy, Stingy Build, and the legacy feature skill', () => {
   const tempWorkspace = fs.mkdtempSync(path.join(os.tmpdir(), 'stingy-init-test-'));
   try {
     const stdout = execFileSync(process.execPath, [CLI_PATH, 'init', '--mode', 'scrooge'], {
@@ -270,13 +270,16 @@ test('stingy init installs both distinct skill files and prints their activation
       encoding: 'utf8'
     });
     for (const agentDir of ['.claude', '.agents']) {
-      for (const name of ['stingy', 'stingy-lite']) {
+      for (const name of ['stingy', 'stingy-build', 'stingy-lite']) {
         const file = path.join('skills', name, 'SKILL.md');
         assert.deepEqual(fs.readFileSync(path.join(tempWorkspace, agentDir, file)), fs.readFileSync(path.join(REPO_ROOT, file)));
       }
     }
     assert.match(stdout, /\/stingy scrooge/);
-    assert.match(stdout, /\/stingy-lite/);
+    assert.match(stdout, /\/stingy-build/);
+    const rules = (name) => fs.readFileSync(path.join(REPO_ROOT, 'skills', name, 'SKILL.md'), 'utf8')
+      .split('## Core Rules')[1].replace(/STINGY-(BUILD|LITE)/g, 'STINGY').trim();
+    assert.equal(rules('stingy-build'), rules('stingy-lite'));
   } finally {
     fs.rmSync(tempWorkspace, { recursive: true, force: true });
   }

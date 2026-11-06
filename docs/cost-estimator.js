@@ -26,7 +26,7 @@ const workloads = {
 // benchmarks/fixtures/live-whiteboard-*.jsonl
 const featureRows = [
   ['No skill', 98333, 250256, 4516],
-  ['Stingy Lite', 19510, 31963, 2024]
+  ['Stingy Build', 19510, 31963, 2024]
 ];
 
 // API Standard text rates in USD per million tokens.
@@ -47,7 +47,7 @@ const status = document.getElementById('cost-status');
 const bugRows = document.getElementById('cost-bug-rows');
 const whiteboardRows = document.getElementById('cost-feature-rows');
 const stingySavings = document.getElementById('cost-stingy-savings');
-const liteSavings = document.getElementById('cost-lite-savings');
+const buildSavings = document.getElementById('cost-build-savings');
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 4 });
 const unitsPerDollar = 10000;
 
@@ -102,7 +102,7 @@ function updateCosts() {
   const bugFixes = workloads[workload.value];
   source.href = bugFixes.source;
   renderCosts(bugRows, bugFixes.rows, prices, repeats, stingySavings);
-  renderCosts(whiteboardRows, featureRows, prices, repeats, liteSavings);
+  renderCosts(whiteboardRows, featureRows, prices, repeats, buildSavings);
 }
 
 model.addEventListener('change', () => {

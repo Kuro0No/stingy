@@ -655,7 +655,7 @@
             </div>
             <div class="cost-highlights" aria-live="polite">
               <p>Stingy · <strong id="cost-stingy-savings">—</strong></p>
-              <p>Stingy Lite · <strong id="cost-lite-savings">—</strong></p>
+              <p>Stingy Build · <strong id="cost-build-savings">—</strong></p>
             </div>
             <label for="cost-workload">Bug-fix benchmark</label>
             <select id="cost-workload">
@@ -703,7 +703,7 @@
                 <thead><tr><th scope="col">Configuration</th><th scope="col">Est. cost</th><th scope="col">vs. control</th></tr></thead>
                 <tbody id="cost-feature-rows"></tbody>
               </table>
-              <p class="cost-note">Stingy Lite was measured on feature work. It has its own no-skill control. <a href="https://github.com/Kuro0No/stingy#-case-study-2-complex-feature-building-with-stingy-lite-realtime-crdt-whiteboard">Whiteboard benchmark data</a>.</p>
+              <p class="cost-note">This feature benchmark used the original <code>/stingy-lite</code> name for Stingy Build and has its own no-skill control. <a href="https://github.com/Kuro0No/stingy#-case-study-2-complex-feature-building-with-stingy-lite-realtime-crdt-whiteboard">Whiteboard benchmark data</a>.</p>
             </div>
           </div>
         </div>
@@ -717,19 +717,19 @@
           <div class="panel skills-panel">
             <span class="eyebrow">[ 02 — CHOOSE A STINGY SKILL ]</span>
             <div class="mode-tabs">
-              <button type="button" class="mode-tab is-active" data-skill="stingy-lite" aria-pressed="true">/stingy-lite</button>
+              <button type="button" class="mode-tab is-active" data-skill="stingy-build" aria-pressed="true">/stingy-build</button>
               <button type="button" class="mode-tab" data-skill="stingy" aria-pressed="false">/stingy</button>
             </div>
 
-            <p id="skill-summary">12 coins per turn for feature work and multi-file refactors. Activate with <code>/stingy-lite</code>.</p>
+            <p id="skill-summary">12 coins per turn for feature work and multi-file refactors. Activate with <code>/stingy-build</code>.</p>
             <pre class="skill-box"><code id="skill-preview">Loading SKILL.md…</code></pre>
-            <a id="skill-source" href="https://github.com/Kuro0No/stingy/blob/main/skills/stingy-lite/SKILL.md">View SKILL.md on GitHub</a>
+            <a id="skill-source" href="https://github.com/Kuro0No/stingy/blob/main/skills/stingy-build/SKILL.md">View SKILL.md on GitHub</a>
 
             <button type="button" class="btn" style="width: 100%; margin-top: 14px;" id="copy-skill-btn" disabled>
               COPY SKILL.MD
             </button>
             <p id="skill-status" role="status"></p>
-            <p>Install both project skills with <code>npx github:Kuro0No/stingy init</code>.</p>
+            <p>Install the project skills with <code>npx github:Kuro0No/stingy init</code>. The old <code>/stingy-lite</code> command still works for feature building.</p>
           </div>
       </div>
     </section>
@@ -743,7 +743,7 @@
           <p>Each comparison adds input, including cached input, to output. Savings varied by workload.</p>
           <ul>
             <li><strong>3,100-line bug hunt</strong> · 345,534 → 55,671 tokens with Scrooge (<strong>−83.89%</strong>).</li>
-            <li><strong>CRDT whiteboard feature</strong> · 353,105 → 53,497 tokens with <code>/stingy-lite</code> (<strong>−84.85%</strong>). <a href="./whiteboard-demo.html">Try the whiteboard demo</a>.</li>
+            <li><strong>CRDT whiteboard feature</strong> · 353,105 → 53,497 tokens with Stingy Build, recorded as <code>/stingy-lite</code> (<strong>−84.85%</strong>). <a href="./whiteboard-demo.html">Try the whiteboard demo</a>.</li>
             <li><strong>Two Codex bug fixes</strong> · 191,228 → 183,916 tokens with Scrooge (<strong>−3.82%</strong>). Shell output fell from 61,131 to 13,010 bytes (<strong>−78.7%</strong>) and both patches passed. <a href="https://github.com/Kuro0No/stingy/blob/main/benchmarks/codex-comparison.md">See the live comparison with RTK and Context Mode</a>.</li>
           </ul>
           <p>The bug-hunt replay below uses fixed example rates for USD. The static ignore row reuses the baseline trace.</p>
@@ -885,7 +885,7 @@
     });
 
     const skillSummaries = {
-      'stingy-lite': '12 coins per turn for feature work and multi-file refactors. Activate with /stingy-lite.',
+      'stingy-build': '12 coins per turn for feature work and multi-file refactors. Activate with /stingy-build.',
       stingy: '10 coins per turn. Choose /stingy lite, /stingy strict, or /stingy scrooge in chat.'
     };
     const modeTabs = document.querySelectorAll('.mode-tab');
@@ -936,7 +936,7 @@
         skillStatus.textContent = 'Select the preview text to copy it manually.';
       }
     });
-    selectSkill('stingy-lite');
+    selectSkill('stingy-build');
   </script>
   <script type="module" src="./cost-estimator.js"></script>
 </body>

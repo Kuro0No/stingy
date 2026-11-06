@@ -6,7 +6,7 @@
  *   stingy roast [path]    -> Audit local JSONL transcripts & print a Token Autopsy Receipt
  *   stingy usage [agent]   -> Summarize agent tokens and estimated cost via ccusage
  *   stingy audit [dir]     -> Find high-token files ("Token Black Holes") & generate .claudeignore
- *   stingy init [--mode]   -> Install /stingy and /stingy-lite project skills
+ *   stingy init [--mode]   -> Install /stingy and /stingy-build project skills
  */
 
 import fs from 'node:fs';
@@ -295,15 +295,20 @@ function runInit() {
 
   const skillRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'skills');
   const generalFile = path.join(skillRoot, 'stingy', 'SKILL.md');
-  const liteFile = path.join(skillRoot, 'stingy-lite', 'SKILL.md');
   const skills = [{
     name: 'stingy',
     content: fs.existsSync(generalFile)
       ? fs.readFileSync(generalFile)
       : `---\nname: stingy\ndescription: Stingy Mode (${mode}) — Enforce 10-Coin Turn Budget & surgical line-range reads.\n---\n\n# Stingy Mode (${mode.toUpperCase()})\n1. Always grep with line numbers before reading files.\n2. Always supply StartLine/EndLine or offset/limit (max 100 lines) when reading files.\n3. Never re-read a file already in context.\n`
   }];
-  const hasLite = fs.existsSync(liteFile);
-  if (hasLite) skills.push({ name: 'stingy-lite', content: fs.readFileSync(liteFile) });
+  let featureSkill;
+  for (const name of ['stingy-build', 'stingy-lite']) {
+    const file = path.join(skillRoot, name, 'SKILL.md');
+    if (fs.existsSync(file)) {
+      skills.push({ name, content: fs.readFileSync(file) });
+      featureSkill ??= name;
+    }
+  }
 
   console.log(`\n${C.green}${C.bold}🪙 Installing Stingy project skills${C.reset}`);
   for (const workspaceDir of ['.claude', '.agents']) {
@@ -316,7 +321,7 @@ function runInit() {
     }
   }
   console.log(`  ${C.dim}General mode:${C.reset} ${C.yellow}/stingy ${mode}${C.reset}`);
-  if (hasLite) console.log(`  ${C.dim}Feature-building mode:${C.reset} ${C.yellow}/stingy-lite${C.reset}`);
+  if (featureSkill) console.log(`  ${C.dim}Feature-building mode:${C.reset} ${C.yellow}/${featureSkill}${C.reset}`);
 }
 
 if (command === 'roast' || command === 'usage') {
@@ -339,6 +344,6 @@ ${C.bold}Usage:${C.reset}
   npx github:Kuro0No/stingy roast [path] [--source agent]
   npx github:Kuro0No/stingy usage [agent] [--from report.json] [--json]
   npx github:Kuro0No/stingy audit [dir]        ${C.dim}# Scan repo for Token Black Hole files${C.reset}
-  npx github:Kuro0No/stingy init              ${C.dim}# Install /stingy and /stingy-lite${C.reset}
+  npx github:Kuro0No/stingy init              ${C.dim}# Install /stingy and /stingy-build${C.reset}
 `);
 }

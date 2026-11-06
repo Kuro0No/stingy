@@ -1,6 +1,6 @@
 ---
 name: stingy-lite
-description: Feature-building Stingy Mode (12-Coin Budget) for AI coding agents. Use when building new features, UI pages, or multi-file refactors where file creation/edits are needed alongside surgical context reads and concise output. Trigger with /stingy-lite.
+description: Compatibility alias for the 12-coin Stingy Build skill. Use when explicitly invoked as /stingy-lite.
 ---
 
 # 🪙 `/stingy-lite` — Feature-Building Mode (12-Coin Turn Budget)
