@@ -722,7 +722,7 @@
                 <thead><tr><th scope="col">Configuration</th><th scope="col">Est. cost</th><th scope="col">vs. control</th></tr></thead>
                 <tbody id="cost-feature-rows"></tbody>
               </table>
-              <p class="cost-note">Recorded run · <strong>Gemini 4 Argon Medium</strong> in Antigravity. Stingy Build ran as <code>/stingy-lite</code> with its own no-skill control. <a href="https://github.com/Kuro0No/stingy/blob/main/benchmarks/fixtures/MANIFEST.json">Benchmark manifest</a>.</p>
+              <p class="cost-note">Recorded run · <strong>Gemini 4 Argon Medium</strong> in Antigravity. This Whiteboard benchmark predates the feature skill rename to <code>/stingy-build</code> and includes its own no-skill control. <a href="https://github.com/Kuro0No/stingy/blob/main/benchmarks/fixtures/MANIFEST.json">Benchmark manifest</a>.</p>
             </div>
           </div>
         </div>
@@ -761,7 +761,7 @@
               COPY SKILL.MD
             </button>
             <p id="skill-status" role="status"></p>
-            <p>Install the project skills with <code>npx github:Kuro0No/stingy init</code>. The old <code>/stingy-lite</code> command still works for feature building.</p>
+            <p>Install the project skills with <code>npx github:Kuro0No/stingy init</code>.</p>
           </div>
       </div>
     </section>
@@ -775,7 +775,7 @@
           <p>Each comparison adds input, including cached input, to output. Savings varied by workload.</p>
           <ul>
             <li><strong>3,100-line bug hunt · Gemini 4 Argon High</strong> · 345,534 → 55,671 tokens with Scrooge (<strong>−83.89%</strong>).</li>
-            <li><strong>CRDT whiteboard feature · Gemini 4 Argon Medium</strong> · 353,105 → 53,497 tokens with Stingy Build, recorded as <code>/stingy-lite</code> (<strong>−84.85%</strong>). <a href="./whiteboard-demo.html">Try the whiteboard demo</a>.</li>
+            <li><strong>CRDT whiteboard feature · Gemini 4 Argon Medium</strong> · 353,105 → 53,497 tokens with Stingy Build (recorded before the feature skill was renamed to <code>/stingy-build</code>; <strong>−84.85%</strong>). <a href="./whiteboard-demo.html">Try the whiteboard demo</a>.</li>
             <li><strong>Two Codex bug fixes</strong> · 191,228 → 183,916 tokens with Scrooge (<strong>−3.82%</strong>). Shell output fell from 61,131 to 13,010 bytes (<strong>−78.7%</strong>) and both patches passed. <a href="https://github.com/Kuro0No/stingy/blob/main/benchmarks/codex-comparison.md">See the live comparison with RTK and Context Mode</a>.</li>
           </ul>
           <p>Separate Gemini 3.8 Flash Medium Whiteboard runs recorded 146,756 tokens with read-only tools and 509,359 with write access. These runs had different tool permissions. <a href="https://github.com/Kuro0No/stingy/blob/main/benchmarks/fixtures/MANIFEST.json">See the benchmark manifest</a>.</p>

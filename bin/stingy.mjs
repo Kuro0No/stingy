@@ -301,13 +301,11 @@ function runInit() {
       ? fs.readFileSync(generalFile)
       : `---\nname: stingy\ndescription: Stingy Mode (${mode}) — Enforce 10-Coin Turn Budget & surgical line-range reads.\n---\n\n# Stingy Mode (${mode.toUpperCase()})\n1. Always grep with line numbers before reading files.\n2. Always supply StartLine/EndLine or offset/limit (max 100 lines) when reading files.\n3. Never re-read a file already in context.\n`
   }];
-  let featureSkill;
-  for (const name of ['stingy-build', 'stingy-lite']) {
-    const file = path.join(skillRoot, name, 'SKILL.md');
-    if (fs.existsSync(file)) {
-      skills.push({ name, content: fs.readFileSync(file) });
-      featureSkill ??= name;
-    }
+  const featureSkillName = 'stingy-build';
+  const featureFile = path.join(skillRoot, featureSkillName, 'SKILL.md');
+  const hasFeatureSkill = fs.existsSync(featureFile);
+  if (hasFeatureSkill) {
+    skills.push({ name: featureSkillName, content: fs.readFileSync(featureFile) });
   }
 
   console.log(`\n${C.green}${C.bold}🪙 Installing Stingy project skills${C.reset}`);
@@ -321,7 +319,7 @@ function runInit() {
     }
   }
   console.log(`  ${C.dim}General mode:${C.reset} ${C.yellow}/stingy ${mode}${C.reset}`);
-  if (featureSkill) console.log(`  ${C.dim}Feature-building mode:${C.reset} ${C.yellow}/${featureSkill}${C.reset}`);
+  if (hasFeatureSkill) console.log(`  ${C.dim}Feature-building mode:${C.reset} ${C.yellow}/${featureSkillName}${C.reset}`);
 }
 
 if (command === 'roast' || command === 'usage') {

@@ -87,7 +87,7 @@
     <text x="876" y="230" class="c-green" text-anchor="end">−84.85%</text>
     <rect x="496" y="241" width="380" height="10" rx="3" fill="#30363D"/>
     <rect x="496" y="241" width="58" height="10" rx="3" fill="#3FB950"/>
-    <text x="496" y="271" class="c-dim">353,105 → 53,497 tokens · Build (then Lite)</text>
+    <text x="496" y="271" class="c-dim">353,105 → 53,497 tokens · Stingy Build</text>
 
     <text x="496" y="300" class="c-white">Codex · two bug fixes</text>
     <text x="876" y="300" class="c-green" text-anchor="end">−3.82%</text>

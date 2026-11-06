@@ -262,24 +262,30 @@ test('ChatGPT Audit Regression #3: Dynamic tool_result sizing treats 1-line Read
   assert.ok(hugeStats.wastedTokens > 10000, `2,000-line read should waste >10,000 tokens (got ${hugeStats.wastedTokens})`);
 });
 
-test('stingy init installs Stingy, Stingy Build, and the legacy feature skill', () => {
+test('stingy init installs Stingy and Stingy Build while preserving existing legacy customizations', () => {
   const tempWorkspace = fs.mkdtempSync(path.join(os.tmpdir(), 'stingy-init-test-'));
   try {
+    const customizedLegacyPath = path.join(tempWorkspace, '.agents', 'skills', 'stingy-lite', 'SKILL.md');
+    fs.mkdirSync(path.dirname(customizedLegacyPath), { recursive: true });
+    fs.writeFileSync(customizedLegacyPath, '# User-customized skill\n');
+
     const stdout = execFileSync(process.execPath, [CLI_PATH, 'init', '--mode', 'scrooge'], {
       cwd: tempWorkspace,
       encoding: 'utf8'
     });
     for (const agentDir of ['.claude', '.agents']) {
-      for (const name of ['stingy', 'stingy-build', 'stingy-lite']) {
+      for (const name of ['stingy', 'stingy-build']) {
         const file = path.join('skills', name, 'SKILL.md');
         assert.deepEqual(fs.readFileSync(path.join(tempWorkspace, agentDir, file)), fs.readFileSync(path.join(REPO_ROOT, file)));
       }
     }
+    assert.equal(fs.existsSync(path.join(tempWorkspace, '.claude', 'skills', 'stingy-lite', 'SKILL.md')), false);
+    assert.equal(fs.readFileSync(customizedLegacyPath, 'utf8'), '# User-customized skill\n');
     assert.match(stdout, /\/stingy scrooge/);
     assert.match(stdout, /\/stingy-build/);
-    const rules = (name) => fs.readFileSync(path.join(REPO_ROOT, 'skills', name, 'SKILL.md'), 'utf8')
-      .split('## Core Rules')[1].replace(/STINGY-(BUILD|LITE)/g, 'STINGY').trim();
-    assert.equal(rules('stingy-build'), rules('stingy-lite'));
+    assert.doesNotMatch(stdout, /stingy-lite/);
+    const generalSkill = fs.readFileSync(path.join(REPO_ROOT, 'skills', 'stingy', 'SKILL.md'), 'utf8');
+    assert.match(generalSkill, /### `\/stingy lite` — Surgical Engineer[\s\S]*?10\.0 Coin Budget/);
   } finally {
     fs.rmSync(tempWorkspace, { recursive: true, force: true });
   }
