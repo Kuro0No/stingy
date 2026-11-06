@@ -1,13 +1,13 @@
 {"type":"user","message":{"role":"user","content":"Fix the token expiration bug in auth.ts and update the tests"}}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Grep","input":{"pattern":"clockTolerance","path":"src"}}]}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Grep","input":{"pattern":"clockTolerance","path":"src"}}],"model":"claude-sonnet-4-20250514"},"model":"claude-sonnet-4-20250514","provider":"anthropic"}
 {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":"src/auth.ts:142: const skew = opts.clockTolerance ?? 0;"}]}}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t2","name":"Read","input":{"file_path":"src/auth.ts","offset":120,"limit":60}}]}}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t3","name":"Read","input":{"file_path":"src/legacy-monolith.ts"}}]}}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t4","name":"Read","input":{"file_path":"src/legacy-monolith.ts"}}]}}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t5","name":"Edit","input":{"file_path":"src/auth.ts"}}]}}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t6","name":"Bash","input":{"command":"npm test"}}],"status":"ERROR"}}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t7","name":"Bash","input":{"command":"npm test"}}],"status":"ERROR"}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t2","name":"Read","input":{"file_path":"src/auth.ts","offset":120,"limit":60}}],"model":"claude-sonnet-4-20250514"},"model":"claude-sonnet-4-20250514","provider":"anthropic"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t3","name":"Read","input":{"file_path":"src/legacy-monolith.ts"}}],"model":"claude-sonnet-4-20250514"},"model":"claude-sonnet-4-20250514","provider":"anthropic"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t4","name":"Read","input":{"file_path":"src/legacy-monolith.ts"}}],"model":"claude-sonnet-4-20250514"},"model":"claude-sonnet-4-20250514","provider":"anthropic"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t5","name":"Edit","input":{"file_path":"src/auth.ts"}}],"model":"claude-sonnet-4-20250514"},"model":"claude-sonnet-4-20250514","provider":"anthropic"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t6","name":"Bash","input":{"command":"npm test"}}],"status":"ERROR","model":"claude-sonnet-4-20250514"},"model":"claude-sonnet-4-20250514","provider":"anthropic"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t7","name":"Bash","input":{"command":"npm test"}}],"status":"ERROR","model":"claude-sonnet-4-20250514"},"model":"claude-sonnet-4-20250514","provider":"anthropic"}
 {"type":"user","message":{"role":"user","content":"It is still broken, fix it"}}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t8","name":"Read","input":{"file_path":"test/auth.spec.ts","offset":1,"limit":80}}]}}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t9","name":"Edit","input":{"file_path":"test/auth.spec.ts"}}]}}
-{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t10","name":"Bash","input":{"command":"npm test -- --silent"}}],"status":"DONE"}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t8","name":"Read","input":{"file_path":"test/auth.spec.ts","offset":1,"limit":80}}],"model":"claude-sonnet-4-20250514"},"model":"claude-sonnet-4-20250514","provider":"anthropic"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t9","name":"Edit","input":{"file_path":"test/auth.spec.ts"}}],"model":"claude-sonnet-4-20250514"},"model":"claude-sonnet-4-20250514","provider":"anthropic"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"t10","name":"Bash","input":{"command":"npm test -- --silent"}}],"status":"DONE","model":"claude-sonnet-4-20250514"},"model":"claude-sonnet-4-20250514","provider":"anthropic"}
