@@ -305,10 +305,6 @@
       padding: 4px 0;
     }
 
-    .receipt-total--saved {
-      color: var(--green);
-    }
-
     .receipt-total--burned {
       color: var(--accent);
     }
@@ -338,10 +334,98 @@
       margin-top: 8px;
     }
 
-    .sim-grid {
+    .cost-layout, .cost-grid {
       display: grid;
-      grid-template-columns: 6fr 6fr;
-      gap: 32px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .cost-layout { grid-template-columns: minmax(240px, 0.9fr) minmax(0, 2.5fr); }
+    .cost-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    #roast-generator {
+      scroll-margin-top: 100px;
+    }
+
+    .cost-panel { padding: 20px; }
+
+    .cost-highlights {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      margin-bottom: 16px;
+    }
+
+    .cost-highlights p {
+      background: var(--elevated);
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+    }
+
+    .cost-form label {
+      display: block;
+      font-size: 0.8rem;
+      margin-bottom: 4px;
+    }
+
+    .cost-form input[type="number"], .cost-form select {
+      width: 100%;
+      min-height: 38px;
+      padding: 6px 8px;
+      font: inherit;
+      color: var(--ink);
+      background: var(--elevated);
+      border: 1px solid var(--border);
+    }
+
+    .cost-rates {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      align-items: end;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    #cost-workload { margin-bottom: 12px; }
+
+    .cost-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .cost-table caption {
+      text-align: left;
+      font-family: var(--sans);
+      font-weight: 700;
+      font-size: 1.05rem;
+      margin-bottom: 10px;
+    }
+
+    .cost-table th, .cost-table td {
+      padding: 8px 5px;
+      border-bottom: 1px dashed var(--border);
+      text-align: right;
+    }
+
+    .cost-table th:first-child { text-align: left; }
+    .cost-table td { white-space: nowrap; }
+    .cost-table .cost-featured { background: var(--elevated); }
+    .cost-saves { color: var(--green); }
+    .cost-extra { color: var(--accent); }
+    .cost-note {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 12px;
+    }
+
+    .skills-panel {
+      max-width: 800px;
+      margin: 0 auto;
     }
 
     .panel {
@@ -351,7 +435,7 @@
     }
 
     .slider-group {
-      margin-bottom: 22px;
+      margin-bottom: 10px;
     }
 
     .slider-head {
@@ -412,9 +496,13 @@
       text-align: center;
     }
 
+    @media (max-width: 1080px) {
+      .cost-grid { grid-template-columns: 1fr; }
+    }
+
     @media (max-width: 920px) {
       .hero__grid,
-      .sim-grid,
+      .cost-layout,
       .trinity-grid {
         grid-template-columns: 1fr;
       }
@@ -422,6 +510,20 @@
         border-right: none;
         border-bottom: 1px solid var(--border);
       }
+    }
+
+    @media (max-width: 680px) {
+      .header__inner { height: auto; min-height: 66px; padding-block: 8px; flex-wrap: wrap; gap: 8px; }
+      .header__right { flex-wrap: wrap; gap: 6px; }
+      .header__right .btn { padding: 6px 9px; font-size: 0.72rem; }
+      #roast-generator { scroll-margin-top: 150px; }
+    }
+
+    @media (max-width: 520px) {
+      #roast-generator { padding-block: 40px; }
+      #roast-generator .section__head { margin-bottom: 24px; }
+      .cost-panel { padding: 14px; }
+      .cost-table { font-size: 0.72rem; }
     }
   </style>
 </head>
@@ -443,7 +545,7 @@
         <a href="./whiteboard-demo.html" class="btn btn--outline">🎨 CRDT WHITEBOARD DEMO</a>
         <button class="btn btn--outline" id="theme-btn" type="button">DARK / LIGHT</button>
         <a href="https://github.com/Kuro0No/stingy" target="_blank" rel="noopener" class="btn btn--outline">GITHUB ★</a>
-        <a href="#roast-generator" class="btn">ROAST MY TOKEN BILL →</a>
+        <a href="#roast-generator" class="btn">ESTIMATE API COST →</a>
       </div>
     </div>
   </header>
@@ -486,13 +588,13 @@
           </div>
         </div>
 
-        <!-- LIVE RECEIPT PREVIEW -->
+        <!-- PUBLIC SAMPLE RECEIPT -->
         <div>
           <div class="receipt-wrapper" id="live-receipt">
             <div class="receipt-header">
               <div class="receipt-title">🪙 STINGY TOKEN AUTOPSY 🪙</div>
               <div>"Why burn 50k tokens when 400 do?"</div>
-              <div>ESTIMATED WASTE // TOKEN SIMULATOR</div>
+              <div>ESTIMATED WASTE // PUBLIC SAMPLE</div>
             </div>
 
             <div class="receipt-row">
@@ -519,13 +621,13 @@
               <span id="rc-waste">9,200</span>
             </div>
 
-            <div class="receipt-badge" id="rc-archetype">
+            <div class="receipt-badge">
               Run <code>stingy roast</code> for your session's 10-coin score.
             </div>
 
             <div style="margin-top: 14px; display: flex; gap: 8px;">
               <button type="button" class="btn" style="width: 100%;" id="copy-receipt-btn">
-                COPY ASCII RECEIPT FOR X / REDDIT
+                COPY SAMPLE RECEIPT
               </button>
             </div>
           </div>
@@ -533,55 +635,86 @@
       </div>
     </section>
 
-    <!-- INTERACTIVE RECEIPT SIMULATOR -->
+    <!-- API COST ESTIMATOR -->
     <section class="section" id="roast-generator">
       <div class="container">
         <div class="section__head">
-          <span class="eyebrow">[ 01 — INTERACTIVE TOKEN AUTOPSY SIMULATOR ]</span>
-          <h2 class="section__title">See how tool calls add up in tokens</h2>
+          <span class="eyebrow">[ 01 — API COST COMPARISON ]</span>
+          <h2 class="section__title">What would the same work cost?</h2>
+          <p>Apply one set of API rates to the recorded token counts and compare costs in USD.</p>
         </div>
 
-        <div class="sim-grid">
-          <div class="panel">
+        <div class="cost-layout">
+          <div class="panel cost-panel cost-form">
             <div class="slider-group">
               <div class="slider-head">
-                <label for="sim-reads">Full-File Reads per session (without line ranges)</label>
-                <strong id="val-reads">1</strong>
+                <label for="cost-runs">Benchmark repeats per month</label>
+                <output id="cost-run-count" for="cost-runs">100</output>
               </div>
-              <input type="range" id="sim-reads" min="0" max="120" value="1" />
+              <input type="range" id="cost-runs" min="1" max="1000" value="100" />
             </div>
-
-            <div class="slider-group">
-              <div class="slider-head">
-                <label for="sim-duplicates">Duplicate full-file reads</label>
-                <strong id="val-duplicates">1</strong>
+            <div class="cost-highlights" aria-live="polite">
+              <p>Stingy · <strong id="cost-stingy-savings">—</strong></p>
+              <p>Stingy Lite · <strong id="cost-lite-savings">—</strong></p>
+            </div>
+            <label for="cost-workload">Bug-fix benchmark</label>
+            <select id="cost-workload">
+              <option value="codex">Codex · two bug fixes</option>
+              <option value="bugHunt">3,100-line bug hunt</option>
+            </select>
+            <label for="cost-model">API rate preset</label>
+            <select id="cost-model">
+              <option value="sol">GPT-6.1 Sol · Standard</option>
+              <option value="astra">GPT-6 Astra · Standard</option>
+              <option value="terra">GPT-6.1 Terra · Standard</option>
+              <option value="luna">GPT-6 Luna · Standard</option>
+              <option value="custom">Custom rates</option>
+            </select>
+            <div class="cost-rates">
+              <div>
+                <label for="rate-input">Uncached input</label>
+                <input type="number" id="rate-input" value="2" min="0" max="1000000" step="any" required />
               </div>
-              <input type="range" id="sim-duplicates" min="0" max="120" value="1" />
-            </div>
-
-            <div class="slider-group">
-              <div class="slider-head">
-                <label for="sim-retries">Failed Command / Build Retry Loops</label>
-                <strong id="val-retries">1</strong>
+              <div>
+                <label for="rate-cached">Cached input</label>
+                <input type="number" id="rate-cached" value="0.1" min="0" max="1000000" step="any" required />
               </div>
-              <input type="range" id="sim-retries" min="0" max="40" value="1" />
-            </div>
-
-            <div class="slider-group">
-              <div class="slider-head">
-                <label for="sim-rage">"Fix it / That's wrong" Rage Prompts</label>
-                <strong id="val-rage">1</strong>
+              <div>
+                <label for="rate-output">Output</label>
+                <input type="number" id="rate-output" value="10" min="0" max="1000000" step="any" required />
               </div>
-              <input type="range" id="sim-rage" min="0" max="30" value="1" />
             </div>
-
-            <p style="font-size: 0.85rem; color: var(--muted);">
-              The sliders use the per-event estimates in the public sample receipt. Roast uses result sizes when available and scores coins per turn. Run <code>npx github:Kuro0No/stingy roast</code> to audit your transcripts, or <code>npx github:Kuro0No/stingy usage</code> for logged usage and available cost estimates.
-            </p>
+            <p class="cost-note">Rates are USD per million tokens. <a href="https://developers.openai.com/api/docs/pricing">OpenAI API pricing</a>.</p>
+            <p id="cost-status" role="status" hidden></p>
           </div>
 
-          <!-- PROJECT SKILLS -->
-          <div class="panel">
+          <div class="cost-grid">
+            <div class="panel cost-panel">
+              <table class="cost-table">
+                <caption>Bug-fix costs per month</caption>
+                <thead><tr><th scope="col">Configuration</th><th scope="col">Est. cost</th><th scope="col">vs. control</th></tr></thead>
+                <tbody id="cost-bug-rows"></tbody>
+              </table>
+              <p class="cost-note"><a id="cost-bug-source" href="https://github.com/Kuro0No/stingy/blob/main/benchmarks/codex-comparison.md">Recorded benchmark data</a></p>
+            </div>
+            <div class="panel cost-panel">
+              <table class="cost-table">
+                <caption>CRDT Whiteboard feature costs per month</caption>
+                <thead><tr><th scope="col">Configuration</th><th scope="col">Est. cost</th><th scope="col">vs. control</th></tr></thead>
+                <tbody id="cost-feature-rows"></tbody>
+              </table>
+              <p class="cost-note">Stingy Lite was measured on feature work. It has its own no-skill control. <a href="https://github.com/Kuro0No/stingy#-case-study-2-complex-feature-building-with-stingy-lite-realtime-crdt-whiteboard">Whiteboard benchmark data</a>.</p>
+            </div>
+          </div>
+        </div>
+        <p class="cost-note">Monthly projections repeat each recorded workload at the selected rates. Estimates include uncached input, cache reads, and output. Cache writes, provider fees, and subscription quotas are outside this calculation.</p>
+        <noscript><p>Enable JavaScript to calculate API costs from the recorded benchmarks.</p></noscript>
+      </div>
+    </section>
+
+    <section class="section" id="skills">
+      <div class="container">
+          <div class="panel skills-panel">
             <span class="eyebrow">[ 02 — CHOOSE A STINGY SKILL ]</span>
             <div class="mode-tabs">
               <button type="button" class="mode-tab is-active" data-skill="stingy-lite" aria-pressed="true">/stingy-lite</button>
@@ -598,7 +731,6 @@
             <p id="skill-status" role="status"></p>
             <p>Install both project skills with <code>npx github:Kuro0No/stingy init</code>.</p>
           </div>
-        </div>
       </div>
     </section>
 
@@ -726,51 +858,30 @@
       setTimeout(() => (copyCliBtn.textContent = 'COPY'), 1800);
     });
 
-    // Interactive Receipt Simulator
-    // Per-event waste estimates from benchmarks/fixtures/sample-session.jsonl.
-    const wasteItems = [
-      { id: 'reads', label: 'Full-File Reads', tokens: 2800 },
-      { id: 'duplicates', label: 'Duplicate File Re-Reads', tokens: 3600 },
-      { id: 'retries', label: 'Blind Retry Loops', tokens: 2400 },
-      { id: 'rage', label: 'Frustration / Fix Prompts', tokens: 400 }
+    const sampleReceiptItems = [
+      ['reads', 'Full-File Reads'],
+      ['duplicates', 'Duplicate File Re-Reads'],
+      ['retries', 'Blind Retry Loops'],
+      ['rage', 'Frustration / Fix Prompts']
     ];
-    const number = new Intl.NumberFormat('en-US');
-    const wasteTotal = document.getElementById('rc-waste');
 
-    function updateReceipt() {
-      let total = 0;
-      for (const { id, tokens } of wasteItems) {
-        const count = Number(document.getElementById(`sim-${id}`).value);
-        const waste = count * tokens;
-        document.getElementById(`val-${id}`).textContent = number.format(count);
-        document.getElementById(`rc-${id}`).textContent = `${count}x (${number.format(waste)} tokens)`;
-        total += waste;
-      }
-      wasteTotal.textContent = number.format(total);
-    }
-
-    for (const { id } of wasteItems) {
-      document.getElementById(`sim-${id}`).addEventListener('input', updateReceipt);
-    }
-
-    // Copy ASCII receipt
     const copyReceiptBtn = document.getElementById('copy-receipt-btn');
     copyReceiptBtn.addEventListener('click', () => {
       const ascii = [
         '=================================================',
         '|          🪙 STINGY TOKEN AUTOPSY 🪙           |',
-        '|                TOKEN SIMULATOR                |',
+        '|                 PUBLIC SAMPLE                 |',
         '|-----------------------------------------------|',
-        ...wasteItems.map(({ id, label }) =>
+        ...sampleReceiptItems.map(([id, label]) =>
           `| ${label.padEnd(25)}${document.getElementById(`rc-${id}`).textContent.padStart(20)} |`
         ),
         '|-----------------------------------------------|',
-        `| ${'EST. WASTED TOKENS'.padEnd(25)}${wasteTotal.textContent.padStart(20)} |`,
+        `| ${'EST. WASTED TOKENS'.padEnd(25)}${document.getElementById('rc-waste').textContent.padStart(20)} |`,
         '================================================='
       ].join('\n');
       navigator.clipboard?.writeText(ascii);
       copyReceiptBtn.textContent = '✓ COPIED ASCII RECEIPT!';
-      setTimeout(() => (copyReceiptBtn.textContent = 'COPY ASCII RECEIPT FOR X / REDDIT'), 2000);
+      setTimeout(() => (copyReceiptBtn.textContent = 'COPY SAMPLE RECEIPT'), 2000);
     });
 
     const skillSummaries = {
@@ -827,5 +938,6 @@
     });
     selectSkill('stingy-lite');
   </script>
+  <script type="module" src="./cost-estimator.js"></script>
 </body>
 </html>

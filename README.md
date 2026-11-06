@@ -18,6 +18,8 @@ The receipt uses the [public sample transcript](./benchmarks/fixtures/sample-ses
 
 On the two Codex bug fixes, shell output fell from **61,131 to 13,010 bytes (78.7%)** and both patches passed their tests. Token savings varied by workload.
 
+The [API cost calculator](https://kuro0no.github.io/stingy/#roast-generator) prices the recorded token counts using a selected rate and monthly workload. It compares Stingy, Caveman, and Ponytail on bug fixes and compares Stingy Lite with its own Whiteboard control.
+
 <p align="center">
   <a href="#license"><img src="https://img.shields.io/badge/License-MIT-black.svg" alt="License: MIT" /></a>
   <a href="./test/"><img src="https://img.shields.io/badge/tests-36%20passing-brightgreen.svg" alt="Tests: 36 passing" /></a>
