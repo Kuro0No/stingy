@@ -13,7 +13,7 @@ The receipt uses the [public sample transcript](./benchmarks/fixtures/sample-ses
 | Workload | Control | With Stingy | Fewer tokens |
 | :--- | ---: | ---: | ---: |
 | [3,100-line bug hunt](#-multi-plugin-live-telemetry-comparison-npm-run-benchmarkplugins), Scrooge | 345,534 | 55,671 | **83.89%** |
-| [CRDT whiteboard feature](#-case-study-2-complex-feature-building-with-stingy-lite-realtime-crdt-whiteboard), Lite | 353,105 | 53,497 | **84.85%** |
+| [CRDT whiteboard feature](#-case-study-2-complex-feature-building-with-stingy-lite-realtime-crdt-whiteboard), `/stingy-lite` | 353,105 | 53,497 | **84.85%** |
 | [Two Codex bug fixes](./benchmarks/codex-comparison.md), Scrooge | 191,228 | 183,916 | **3.82%** |
 
 On the two Codex bug fixes, shell output fell from **61,131 to 13,010 bytes (78.7%)** and both patches passed their tests. Token savings varied by workload.
@@ -28,13 +28,13 @@ On the two Codex bug fixes, shell output fell from **61,131 to 13,010 bytes (78.
 
 ## ⚡ Quick Start (1 Command, Zero Dependencies)
 
-Install the `/stingy` project skill into `.claude/skills/stingy/SKILL.md` (Claude Code) and `.agents/skills/stingy/SKILL.md` (Antigravity / Cursor) directly from GitHub:
+Install both project skills under `.claude/skills/` and `.agents/skills/`.
 
 ```bash
 npx github:Kuro0No/stingy init
 ```
 
-Then activate in chat with `/stingy scrooge` (or `/stingy strict`).
+In chat, use `/stingy-lite` for feature work and multi-file refactors (12 coins). Use `/stingy strict`, `/stingy scrooge`, or `/stingy lite` for the general 10-coin skill.
 
 Audit local session logs offline with `roast`. Add `--source codex` to focus on one agent.
 
@@ -52,7 +52,7 @@ npx github:Kuro0No/stingy roast
 /plugin marketplace add Kuro0No/stingy
 /plugin install stingy@stingy
 ```
-*(Note: When installed via the Claude Code Plugin Marketplace, invoke with the plugin namespace `/stingy:stingy` or `/stingy:stingy-roast`).*
+*For marketplace installs, use the plugin namespace. The feature skill is `/stingy:stingy-lite`.*
 
 **Universal Skills CLI:**
 ```bash
@@ -137,9 +137,10 @@ What happens when you are **building a complex multi-file feature** instead of h
 
 | Slash Command | Turn Budget | Best Used For | Key Rules Enforced |
 | :--- | :---: | :--- | :--- |
-| **`/stingy-lite`** (or `/stingy lite`) | **12.0 Coins** | **Feature building, UI scaffolding, multi-file refactors** | 1-shot `grep` (`0.5c`), surgical reads `≤ 120 lines` (`1.0c`), forbids `cat`/`Get-Content` shell bypasses, max 1 quiet verification check, concise output. |
-| **`/stingy`** (or `/stingy strict`) | **10.0 Coins** | **Daily coding, debugging, PR reviews (Default)** | Mandatory `grep` before reading files `> 150 lines`, `StartLine`/`EndLine ≤ 120 lines`, zero duplicate reads, `--silent` tests, 1-line Coin Receipt. |
-| **`/stingy scrooge`** | **8.0 Coins** | **Surgical bug hunts on massive monorepos** | Ultra-tight `60–70 line` reads, max 2 file reads per turn, diff-only code output, zero filler prose. |
+| **`/stingy-lite`** | **12.0 Coins** | **Feature building, UI scaffolding, multi-file refactors** | Targeted search, reads of up to 120 lines, one quiet verification command, and a `STINGY-LITE` receipt. |
+| **`/stingy lite`** | **10.0 Coins** | Targeted context gathering | Search first, read up to 120 lines, and batch independent tool calls. Receipt on request. |
+| **`/stingy`** (or `/stingy strict`) | **10.0 Coins** | Daily coding, debugging, PR reviews | Inherits the general lite rules, limits exploratory reads, and adds a coin receipt. |
+| **`/stingy scrooge`** | **10.0 Coins** | Focused bug hunts | Inherits strict rules, avoids speculative calls, plans the patch before editing, and uses a Scrooge receipt. |
 | **`/stingy-roast`** (or `/stingy roast`) | **Audit Mode** | **In-chat session token autopsy** | Runs the offline transcript analyzer and prints your ASCII Token Autopsy Receipt + Archetype diagnosis inside chat. |
 
 ### 2. Terminal CLI Commands (`npx github:Kuro0No/stingy <cmd>`)
@@ -149,7 +150,7 @@ What happens when you are **building a complex multi-file feature** instead of h
 | `npx github:Kuro0No/stingy roast [path]` | Scans local transcripts (`~/.claude`, `~/.gemini`, `~/.codex`, `~/.copilot`, etc.) and prints the ASCII Token Autopsy Receipt. |
 | `npx github:Kuro0No/stingy roast --source <agent>` | Filters `roast` by agent (`claude`, `antigravity`, `codex`, `gemini`, `copilot`, `pi`, `openclaw`). |
 | `npx github:Kuro0No/stingy usage [source]` | Summarizes logged input/output/cache token bills across 18 agent sources via `ccusage`. |
-| `npx github:Kuro0No/stingy init [--mode lite\|strict\|scrooge]` | Installs `SKILL.md` into `.claude/skills/stingy/` and `.agents/skills/stingy/` in your current workspace. |
+| `npx github:Kuro0No/stingy init [--mode lite\|strict\|scrooge]` | Installs `stingy` and `stingy-lite` under `.claude/skills/` and `.agents/skills/`. `--mode` selects the suggested `/stingy` invocation. |
 | `npx github:Kuro0No/stingy audit` | Prints a JSON summary of your local transcript token & coin metrics for CI or scripts. |
 
 ---

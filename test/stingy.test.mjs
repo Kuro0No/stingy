@@ -262,23 +262,21 @@ test('ChatGPT Audit Regression #3: Dynamic tool_result sizing treats 1-line Read
   assert.ok(hugeStats.wastedTokens > 10000, `2,000-line read should waste >10,000 tokens (got ${hugeStats.wastedTokens})`);
 });
 
-test('ChatGPT Audit Regression #4: stingy init creates both .claude/skills/stingy/SKILL.md and .agents/skills/stingy/SKILL.md', () => {
+test('stingy init installs both distinct skill files and prints their activation commands', () => {
   const tempWorkspace = fs.mkdtempSync(path.join(os.tmpdir(), 'stingy-init-test-'));
   try {
-    execFileSync(process.execPath, [CLI_PATH, 'init', '--mode', 'scrooge'], {
+    const stdout = execFileSync(process.execPath, [CLI_PATH, 'init', '--mode', 'scrooge'], {
       cwd: tempWorkspace,
       encoding: 'utf8'
     });
-    assert.equal(
-      fs.existsSync(path.join(tempWorkspace, '.claude', 'skills', 'stingy', 'SKILL.md')),
-      true,
-      'Must create Claude Code project skill at .claude/skills/stingy/SKILL.md'
-    );
-    assert.equal(
-      fs.existsSync(path.join(tempWorkspace, '.agents', 'skills', 'stingy', 'SKILL.md')),
-      true,
-      'Must create universal agent skill at .agents/skills/stingy/SKILL.md'
-    );
+    for (const agentDir of ['.claude', '.agents']) {
+      for (const name of ['stingy', 'stingy-lite']) {
+        const file = path.join('skills', name, 'SKILL.md');
+        assert.deepEqual(fs.readFileSync(path.join(tempWorkspace, agentDir, file)), fs.readFileSync(path.join(REPO_ROOT, file)));
+      }
+    }
+    assert.match(stdout, /\/stingy scrooge/);
+    assert.match(stdout, /\/stingy-lite/);
   } finally {
     fs.rmSync(tempWorkspace, { recursive: true, force: true });
   }

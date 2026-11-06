@@ -6,7 +6,7 @@
  *   stingy roast [path]    -> Audit local JSONL transcripts & print a Token Autopsy Receipt
  *   stingy usage [agent]   -> Summarize agent tokens and estimated cost via ccusage
  *   stingy audit [dir]     -> Find high-token files ("Token Black Holes") & generate .claudeignore
- *   stingy init [--mode]   -> Install Stingy Mode into .agents/skills, CLAUDE.md, or .cursorrules
+ *   stingy init [--mode]   -> Install /stingy and /stingy-lite project skills
  */
 
 import fs from 'node:fs';
@@ -287,48 +287,36 @@ function runAudit(targetDir = process.cwd()) {
 }
 
 /**
- * Install Stingy Mode skill into current workspace
+ * Install the bundled project skills into the current workspace.
  */
 function runInit() {
   const modeIndex = args.indexOf('--mode');
   const mode = modeIndex !== -1 && args[modeIndex + 1] ? args[modeIndex + 1] : 'scrooge';
 
-  const targetDirs = [
-    path.join(process.cwd(), '.claude', 'skills', 'stingy'),
-    path.join(process.cwd(), '.agents', 'skills', 'stingy')
-  ];
+  const skillRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'skills');
+  const generalFile = path.join(skillRoot, 'stingy', 'SKILL.md');
+  const liteFile = path.join(skillRoot, 'stingy-lite', 'SKILL.md');
+  const skills = [{
+    name: 'stingy',
+    content: fs.existsSync(generalFile)
+      ? fs.readFileSync(generalFile)
+      : `---\nname: stingy\ndescription: Stingy Mode (${mode}) — Enforce 10-Coin Turn Budget & surgical line-range reads.\n---\n\n# Stingy Mode (${mode.toUpperCase()})\n1. Always grep with line numbers before reading files.\n2. Always supply StartLine/EndLine or offset/limit (max 100 lines) when reading files.\n3. Never re-read a file already in context.\n`
+  }];
+  const hasLite = fs.existsSync(liteFile);
+  if (hasLite) skills.push({ name: 'stingy-lite', content: fs.readFileSync(liteFile) });
 
-  const bundledSkill = path.join(
-    path.dirname(fileURLToPath(import.meta.url)),
-    '..',
-    'skills',
-    'stingy',
-    'SKILL.md'
-  );
-
-  const createdPaths = [];
-  for (const dir of targetDirs) {
-    fs.mkdirSync(dir, { recursive: true });
-    const targetSkill = path.join(dir, 'SKILL.md');
-    if (fs.existsSync(bundledSkill)) {
-      fs.copyFileSync(bundledSkill, targetSkill);
-    } else {
-      fs.writeFileSync(
-        targetSkill,
-        `---\nname: stingy\ndescription: Stingy Mode (${mode}) — Enforce 10-Coin Turn Budget & surgical line-range reads.\n---\n\n# Stingy Mode (${mode.toUpperCase()})\n1. Always grep with line numbers before reading files.\n2. Always supply StartLine/EndLine or offset/limit (max 100 lines) when reading files.\n3. Never re-read a file already in context.\n`,
-        'utf8'
-      );
+  console.log(`\n${C.green}${C.bold}🪙 Installing Stingy project skills${C.reset}`);
+  for (const workspaceDir of ['.claude', '.agents']) {
+    for (const { name, content } of skills) {
+      const dir = path.join(workspaceDir, 'skills', name);
+      const file = path.join(dir, 'SKILL.md');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(file, content);
+      console.log(`  ${C.dim}Installed:${C.reset} ${file}`);
     }
-    createdPaths.push(path.relative(process.cwd(), targetSkill));
   }
-
-  console.log(`\n${C.green}${C.bold}🪙 Stingy Mode (${mode.toUpperCase()}) installed!${C.reset}`);
-  for (const p of createdPaths) {
-    console.log(`  ${C.dim}Created:${C.reset} ${p}`);
-  }
-  console.log(
-    `  ${C.dim}Activate in Claude Code / Antigravity / Cursor:${C.reset} ${C.yellow}/stingy ${mode}${C.reset}\n`
-  );
+  console.log(`  ${C.dim}General mode:${C.reset} ${C.yellow}/stingy ${mode}${C.reset}`);
+  if (hasLite) console.log(`  ${C.dim}Feature-building mode:${C.reset} ${C.yellow}/stingy-lite${C.reset}`);
 }
 
 if (command === 'roast' || command === 'usage') {
@@ -351,6 +339,6 @@ ${C.bold}Usage:${C.reset}
   npx github:Kuro0No/stingy roast [path] [--source agent]
   npx github:Kuro0No/stingy usage [agent] [--from report.json] [--json]
   npx github:Kuro0No/stingy audit [dir]        ${C.dim}# Scan repo for Token Black Hole files${C.reset}
-  npx github:Kuro0No/stingy init --mode scrooge ${C.dim}# Install /stingy skill into your project${C.reset}
+  npx github:Kuro0No/stingy init              ${C.dim}# Install /stingy and /stingy-lite${C.reset}
 `);
 }

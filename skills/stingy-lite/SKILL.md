@@ -5,7 +5,7 @@ description: Feature-building Stingy Mode (12-Coin Budget) for AI coding agents.
 
 # 🪙 `/stingy-lite` — Feature-Building Mode (12-Coin Turn Budget)
 
-When **`/stingy-lite`** is active, you are building or refactoring features under a **12.0-Coin per-turn tool budget**. Unlike `/stingy scrooge` (8 Coins, designed for ultra-tight bug hunts), `/stingy-lite` gives you headroom to create and edit files while preventing full-file context bloat and runaway verification loops.
+When **`/stingy-lite`** is active, build or refactor features under a **12.0-Coin per-turn tool budget**. This gives you room to edit across files while keeping reads targeted and verification bounded.
 
 ## Core Rules
 
