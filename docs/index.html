@@ -489,47 +489,35 @@
             <div class="receipt-header">
               <div class="receipt-title">🪙 STINGY TOKEN AUTOPSY 🪙</div>
               <div>"Why burn 50k tokens when 400 do?"</div>
-              <div id="rc-date">ILLUSTRATIVE USD SIMULATION</div>
+              <div>ESTIMATED WASTE // TOKEN SIMULATOR</div>
             </div>
 
             <div class="receipt-row">
               <span>Full-File Reads (No Line Range)</span>
-              <strong id="rc-reads">38x ($1.71)</strong>
+              <strong id="rc-reads">1x (2,800 tokens)</strong>
+            </div>
+            <div class="receipt-row">
+              <span>Duplicate File Re-Reads</span>
+              <strong id="rc-duplicates">1x (3,600 tokens)</strong>
             </div>
             <div class="receipt-row">
               <span>Blind Command Retry Loops</span>
-              <strong id="rc-retries">9x ($0.59)</strong>
+              <strong id="rc-retries">1x (2,400 tokens)</strong>
             </div>
             <div class="receipt-row">
               <span>Rage Prompts ("wrong / fix it")</span>
-              <strong id="rc-rage">7x ($0.35)</strong>
-            </div>
-            <div class="receipt-row">
-              <span>Uncompacted Context Tax</span>
-              <strong id="rc-tax">142 turns ($1.95)</strong>
-            </div>
-            <div class="receipt-row">
-              <span>Surgical Line-Range Reads</span>
-              <strong id="rc-surgical">6x ($0.02)</strong>
+              <strong id="rc-rage">1x (400 tokens)</strong>
             </div>
 
             <div class="receipt-divider"></div>
 
-            <div class="receipt-total">
-              <span>MODELED BASELINE:</span>
-              <span id="rc-raw">$4.62</span>
-            </div>
-            <div class="receipt-total receipt-total--saved">
-              <span id="rc-saved-label">MODELED WITH STINGY:</span>
-              <span id="rc-stingy">$0.88</span>
-            </div>
             <div class="receipt-total receipt-total--burned">
-              <span>MODELED COST DIFFERENCE:</span>
-              <span id="rc-burned">$3.74</span>
+              <span>EST. WASTED TOKENS</span>
+              <span id="rc-waste">9,200</span>
             </div>
 
             <div class="receipt-badge" id="rc-archetype">
-              DIAGNOSIS: THE WHOLE-FILE GLUTTON (Lv. 88)
+              Run <code>stingy roast</code> for your session's 10-coin score.
             </div>
 
             <div style="margin-top: 14px; display: flex; gap: 8px;">
@@ -547,7 +535,7 @@
       <div class="container">
         <div class="section__head">
           <span class="eyebrow">[ 01 — INTERACTIVE TOKEN AUTOPSY SIMULATOR ]</span>
-          <h2 class="section__title">Calculate how much your AI agent is secretly burning</h2>
+          <h2 class="section__title">See how tool calls add up in tokens</h2>
         </div>
 
         <div class="sim-grid">
@@ -555,37 +543,37 @@
             <div class="slider-group">
               <div class="slider-head">
                 <label for="sim-reads">Full-File Reads per session (without line ranges)</label>
-                <strong id="val-reads">38 files</strong>
+                <strong id="val-reads">1</strong>
               </div>
-              <input type="range" id="sim-reads" min="2" max="120" value="38" />
+              <input type="range" id="sim-reads" min="0" max="120" value="1" />
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-head">
+                <label for="sim-duplicates">Duplicate full-file reads</label>
+                <strong id="val-duplicates">1</strong>
+              </div>
+              <input type="range" id="sim-duplicates" min="0" max="120" value="1" />
             </div>
 
             <div class="slider-group">
               <div class="slider-head">
                 <label for="sim-retries">Failed Command / Build Retry Loops</label>
-                <strong id="val-retries">9 loops</strong>
+                <strong id="val-retries">1</strong>
               </div>
-              <input type="range" id="sim-retries" min="0" max="40" value="9" />
+              <input type="range" id="sim-retries" min="0" max="40" value="1" />
             </div>
 
             <div class="slider-group">
               <div class="slider-head">
                 <label for="sim-rage">"Fix it / That's wrong" Rage Prompts</label>
-                <strong id="val-rage">7 prompts</strong>
+                <strong id="val-rage">1</strong>
               </div>
-              <input type="range" id="sim-rage" min="0" max="30" value="7" />
-            </div>
-
-            <div class="slider-group">
-              <div class="slider-head">
-                <label for="sim-turns">Turns before running /compact</label>
-                <strong id="val-turns">142 turns</strong>
-              </div>
-              <input type="range" id="sim-turns" min="15" max="300" value="142" />
+              <input type="range" id="sim-rage" min="0" max="30" value="1" />
             </div>
 
             <p style="font-size: 0.85rem; color: var(--muted);">
-              💡 Want to scan your real local logs? Run <code>npx github:Kuro0No/stingy roast</code> in your terminal to inspect <code>~/.claude</code> and <code>~/.gemini</code> transcripts offline.
+              The sliders use the per-event estimates in the public sample receipt. Roast uses result sizes when available and scores coins per turn. Run <code>npx github:Kuro0No/stingy roast</code> to audit your transcripts, or <code>npx github:Kuro0No/stingy usage</code> for logged usage and available cost estimates.
             </p>
           </div>
 
@@ -617,9 +605,15 @@
     <section class="section" id="live-benchmark" style="padding-top: 0;">
       <div class="container">
         <div class="section__head">
-          <span class="eyebrow">[ 03 — LIVE 7-ARM TELEMETRY BENCHMARK (3,100-LINE BUG HUNT) ]</span>
-          <h2 class="section__title">Recorded token usage for Caveman, Ponytail, and Stingy</h2>
-          <p>USD values use fixed example rates. The static ignore row reuses the baseline trace.</p>
+          <span class="eyebrow">[ 03 — RECORDED TOKEN USAGE ]</span>
+          <h2 class="section__title">How much Stingy saved across three workloads</h2>
+          <p>Each comparison adds input, including cached input, to output. Savings varied by workload.</p>
+          <ul>
+            <li><strong>3,100-line bug hunt</strong> · 345,534 → 55,671 tokens with Scrooge (<strong>−83.89%</strong>).</li>
+            <li><strong>CRDT whiteboard feature</strong> · 353,105 → 53,497 tokens with Lite (<strong>−84.85%</strong>). <a href="./whiteboard-demo.html">Try the whiteboard demo</a>.</li>
+            <li><strong>Two Codex bug fixes</strong> · 191,228 → 183,916 tokens with Scrooge (<strong>−3.82%</strong>). Shell output fell from 61,131 to 13,010 bytes (<strong>−78.7%</strong>) and both patches passed. <a href="https://github.com/Kuro0No/stingy/blob/main/benchmarks/codex-comparison.md">See the live comparison with RTK and Context Mode</a>.</li>
+          </ul>
+          <p>The bug-hunt replay below uses fixed example rates for USD. The static ignore row reuses the baseline trace.</p>
         </div>
 
         <div class="panel" style="overflow-x: auto;">
@@ -732,50 +726,31 @@
     });
 
     // Interactive Receipt Simulator
-    const simReads = document.getElementById('sim-reads');
-    const simRetries = document.getElementById('sim-retries');
-    const simRage = document.getElementById('sim-rage');
-    const simTurns = document.getElementById('sim-turns');
+    // Per-event waste estimates from benchmarks/fixtures/sample-session.jsonl.
+    const wasteItems = [
+      { id: 'reads', label: 'Full-File Reads', tokens: 2800 },
+      { id: 'duplicates', label: 'Duplicate File Re-Reads', tokens: 3600 },
+      { id: 'retries', label: 'Blind Retry Loops', tokens: 2400 },
+      { id: 'rage', label: 'Frustration / Fix Prompts', tokens: 400 }
+    ];
+    const number = new Intl.NumberFormat('en-US');
+    const wasteTotal = document.getElementById('rc-waste');
 
     function updateReceipt() {
-      const reads = Number(simReads.value);
-      const retries = Number(simRetries.value);
-      const rage = Number(simRage.value);
-      const turns = Number(simTurns.value);
-
-      document.getElementById('val-reads').textContent = `${reads} files`;
-      document.getElementById('val-retries').textContent = `${retries} loops`;
-      document.getElementById('val-rage').textContent = `${rage} prompts`;
-      document.getElementById('val-turns').textContent = `${turns} turns`;
-
-      const costReads = reads * 0.045;
-      const costRetries = retries * 0.065;
-      const costRage = rage * 0.05;
-      const costTax = turns * 0.0137;
-
-      const rawTotal = costReads + costRetries + costRage + costTax + 0.02;
-      const stingyTotal = Math.max(0.08, rawTotal * 0.19);
-      const burned = Math.max(0, rawTotal - stingyTotal);
-
-      document.getElementById('rc-reads').textContent = `${reads}x ($${costReads.toFixed(2)})`;
-      document.getElementById('rc-retries').textContent = `${retries}x ($${costRetries.toFixed(2)})`;
-      document.getElementById('rc-rage').textContent = `${rage}x ($${costRage.toFixed(2)})`;
-      document.getElementById('rc-tax').textContent = `${turns} turns ($${costTax.toFixed(2)})`;
-
-      document.getElementById('rc-raw').textContent = `$${rawTotal.toFixed(2)}`;
-      document.getElementById('rc-stingy').textContent = `$${stingyTotal.toFixed(2)}`;
-      document.getElementById('rc-burned').textContent = `$${burned.toFixed(2)}`;
-
-      let archetype = 'DIAGNOSIS: THE CONTEXT HOARDER (Lv. 72)';
-      if (reads > 50) archetype = 'DIAGNOSIS: THE WHOLE-FILE GLUTTON (Lv. 92)';
-      else if (rage >= 10) archetype = 'DIAGNOSIS: THE RAGE-PROMPT ARSONIST (Lv. 99)';
-      else if (reads < 12 && retries < 3) archetype = 'DIAGNOSIS: ONE-SHOT SNIPER (Lv. 50)';
-      document.getElementById('rc-archetype').textContent = archetype;
+      let total = 0;
+      for (const { id, tokens } of wasteItems) {
+        const count = Number(document.getElementById(`sim-${id}`).value);
+        const waste = count * tokens;
+        document.getElementById(`val-${id}`).textContent = number.format(count);
+        document.getElementById(`rc-${id}`).textContent = `${count}x (${number.format(waste)} tokens)`;
+        total += waste;
+      }
+      wasteTotal.textContent = number.format(total);
     }
 
-    [simReads, simRetries, simRage, simTurns].forEach((el) =>
-      el.addEventListener('input', updateReceipt)
-    );
+    for (const { id } of wasteItems) {
+      document.getElementById(`sim-${id}`).addEventListener('input', updateReceipt);
+    }
 
     // Copy ASCII receipt
     const copyReceiptBtn = document.getElementById('copy-receipt-btn');
@@ -783,19 +758,13 @@
       const ascii = [
         '=================================================',
         '|          🪙 STINGY TOKEN AUTOPSY 🪙           |',
-        '|         ILLUSTRATIVE USD SIMULATION           |',
-        '|      "Why burn 50k tokens when 400 do?"       |',
+        '|                TOKEN SIMULATOR                |',
         '|-----------------------------------------------|',
-        `| Full-File Reads:         ${document.getElementById('rc-reads').textContent.padStart(20)} |`,
-        `| Blind Retry Loops:       ${document.getElementById('rc-retries').textContent.padStart(20)} |`,
-        `| Rage Prompts:            ${document.getElementById('rc-rage').textContent.padStart(20)} |`,
-        `| Uncompacted Tax:         ${document.getElementById('rc-tax').textContent.padStart(20)} |`,
+        ...wasteItems.map(({ id, label }) =>
+          `| ${label.padEnd(25)}${document.getElementById(`rc-${id}`).textContent.padStart(20)} |`
+        ),
         '|-----------------------------------------------|',
-        `| MODELED BASELINE:        ${document.getElementById('rc-raw').textContent.padStart(20)} |`,
-        `| MODELED WITH STINGY:     ${document.getElementById('rc-stingy').textContent.padStart(20)} |`,
-        `| MODELED COST DIFFERENCE: ${document.getElementById('rc-burned').textContent.padStart(20)} |`,
-        '|-----------------------------------------------|',
-        `| ${document.getElementById('rc-archetype').textContent.padEnd(45)} |`,
+        `| ${'EST. WASTED TOKENS'.padEnd(25)}${wasteTotal.textContent.padStart(20)} |`,
         '================================================='
       ].join('\n');
       navigator.clipboard?.writeText(ascii);

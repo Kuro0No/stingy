@@ -1,10 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 500" width="920" height="500" role="img" aria-label="Stingy CLI Token Autopsy Receipt and Trace-Driven Benchmark Model">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 500" width="920" height="500" role="img" aria-label="Sample Stingy Roast receipt and recorded token usage across three comparisons">
   <defs>
     <style>
       .bg { fill: #0D1117; }
       .frame { fill: #161B22; stroke: #30363D; stroke-width: 1.5; }
       .panel { fill: #0D1117; stroke: #21262D; stroke-width: 1; }
       .mono { font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 12.2px; }
+      .mono text { white-space: pre; }
       .title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 12px; fill: #8B949E; font-weight: 600; }
       .c-dim { fill: #8B949E; }
       .c-white { fill: #E6EDF3; }
@@ -20,6 +21,9 @@
         from { opacity: 0; transform: translateY(4px); }
         to { opacity: 1; transform: translateY(0); }
       }
+      @media (prefers-reduced-motion: reduce) {
+        .fade-1, .fade-2, .fade-3, .fade-4 { animation: none; }
+      }
     </style>
   </defs>
 
@@ -34,74 +38,69 @@
   <circle cx="64" cy="23" r="6" fill="#27C93F"/>
   <text x="460" y="27" text-anchor="middle" class="title">stingy — zsh — 110×28</text>
 
-  <!-- Left Pane: Real Local Log Autopsy Receipt -->
+  <!-- Left Pane: Public sample receipt -->
   <rect x="20" y="56" width="445" height="424" rx="8" class="panel"/>
   <g class="mono fade-1">
     <text x="34" y="78" class="c-green">$</text>
     <text x="48" y="78" class="c-white">stingy roast sample-session.jsonl</text>
   </g>
 
-  <g class="mono fade-2">
-    <text x="34" y="102" class="c-gold">===============================================</text>
-    <text x="34" y="119" class="c-gold">|          🪙 STINGY TOKEN AUTOPSY 🪙         |</text>
-    <text x="34" y="136" class="c-dim">|      "Why burn 50k tokens when 400 do?"     |</text>
-    <text x="34" y="152" class="c-dim">|---------------------------------------------|</text>
-    <text x="34" y="169" class="c-white">| LOGS SCANNED: 1 file (13 steps)             |</text>
-    <text x="34" y="185" class="c-dim">|---------------------------------------------|</text>
-    <text x="34" y="202" class="c-white">| Full-File Reads                1x    2,800 |</text>
-    <text x="34" y="219" class="c-white">| Duplicate File Re-Reads        1x    3,600 |</text>
-    <text x="34" y="236" class="c-white">| Consecutive Cmd Retries        1x    2,400 |</text>
-    <text x="34" y="253" class="c-white">| Frustration / Fix Prompts      1x      400 |</text>
-    <text x="34" y="270" class="c-green">| Surgical Line-Range Reads      2x        0 |</text>
-    <text x="34" y="287" class="c-green">| Targeted Grep Searches         1x        0 |</text>
-    <text x="34" y="303" class="c-dim">|---------------------------------------------|</text>
-    <text x="34" y="320" class="c-white">| 10-COIN TURN BUDGET AVG:  8.75 / 10.0 Coins |</text>
-    <text x="34" y="337" class="c-white">| BANKRUPT TURNS (&gt;10c):          1 / 2 turns |</text>
-    <text x="34" y="353" class="c-dim">|---------------------------------------------|</text>
-    <text x="34" y="370" class="c-white">| EST. TOOL CONTEXT TOKENS            14,690 |</text>
-    <text x="34" y="387" class="c-red">| AVOIDABLE WASTED TOKENS      9,200 (62.6%) |</text>
-    <text x="34" y="404" class="c-dim">| MODEL COST ESTIMATES          stingy usage |</text>
-    <text x="34" y="420" class="c-dim">|---------------------------------------------|</text>
-    <text x="34" y="438" class="c-cyan">| DIAGNOSIS: CONTEXT OVER-SPENDER            |</text>
-    <text x="34" y="456" class="c-gold">===============================================</text>
+  <g class="mono fade-2" xml:space="preserve">
+    <text x="34" y="102" class="c-gold">=================================================</text>
+    <text x="34" y="119" class="c-gold">|           🪙 STINGY TOKEN AUTOPSY 🪙          |</text>
+    <text x="34" y="136" class="c-dim">| PUBLIC SAMPLE TRANSCRIPT                      |</text>
+    <text x="34" y="152" class="c-dim">|-----------------------------------------------|</text>
+    <text x="34" y="169" class="c-white">| LOGS SCANNED: 1 file (13 steps)               |</text>
+    <text x="34" y="185" class="c-dim">| ITEM                          QTY  EST. WASTE |</text>
+    <text x="34" y="202" class="c-white">| Full-File Reads (No Range)     1x       2,800 |</text>
+    <text x="34" y="219" class="c-white">| Duplicate File Re-Reads        1x       3,600 |</text>
+    <text x="34" y="236" class="c-white">| Consecutive Cmd Retries        1x       2,400 |</text>
+    <text x="34" y="253" class="c-white">| Frustration / Fix Prompts      1x         400 |</text>
+    <text x="34" y="270" class="c-green">| Surgical Line-Range Reads      2x           0 |</text>
+    <text x="34" y="287" class="c-green">| Targeted Grep Searches         1x           0 |</text>
+    <text x="34" y="303" class="c-dim">|-----------------------------------------------|</text>
+    <text x="34" y="320" class="c-white">| 10-COIN TURN BUDGET SCORE     8.75 / 10 Coins |</text>
+    <text x="34" y="337" class="c-white">| BANKRUPT TURNS (&gt;10c)              1 / 2 turns |</text>
+    <text x="34" y="353" class="c-dim">|-----------------------------------------------|</text>
+    <text x="34" y="370" class="c-white">| EST. TOOL CONTEXT TOKENS               14,690 |</text>
+    <text x="34" y="387" class="c-red">| AVOIDABLE WASTED TOKENS         9,200 (62.6%) |</text>
+    <text x="34" y="404" class="c-dim">| MODEL COST ESTIMATES             stingy usage |</text>
+    <text x="34" y="420" class="c-dim">|-----------------------------------------------|</text>
+    <text x="34" y="438" class="c-cyan">| DIAGNOSIS: CONTEXT OVER-SPENDER               |</text>
+    <text x="34" y="456" class="c-gold">=================================================</text>
   </g>
 
-  <!-- Right Pane: Trace-Driven Benchmark Model -->
+  <!-- Right Pane: Recorded usage across three comparisons -->
   <rect x="480" y="56" width="420" height="424" rx="8" class="panel"/>
-  <g class="mono fade-3">
-    <text x="496" y="78" class="c-green">$</text>
-    <text x="510" y="78" class="c-white">npm run benchmark</text>
-    <text x="496" y="102" class="c-gold">SYNTHETIC TRACE MODEL (WORST-CASE VS SCROOGE)</text>
-    <text x="496" y="120" class="c-dim">(Models 8.2k sys prompt + 450t skill + Prompt Cache)</text>
+  <g class="mono fade-3" xml:space="preserve">
+    <text x="496" y="88" class="c-gold">TOTAL TOKENS ACROSS RECORDED RUNS</text>
+    <text x="496" y="108" class="c-dim">Input (including cache) + output</text>
+    <text x="496" y="128" class="c-dim">Full track = control · Green = Stingy</text>
 
-    <!-- Task 1 -->
-    <text x="496" y="152" class="c-white">Task 1: Fix JWT Skew (1,240-line file)</text>
-    <rect x="496" y="161" width="320" height="12" rx="3" fill="#F85149" opacity="0.85"/>
-    <text x="824" y="171" class="c-dim">110.1k</text>
-    <rect x="496" y="178" width="58" height="12" rx="3" fill="#3FB950"/>
-    <text x="562" y="188" class="c-green">19.7k (-82.1% | 2.5/10 Coins)</text>
+    <text x="496" y="160" class="c-white">3,100-line bug hunt</text>
+    <text x="876" y="160" class="c-green" text-anchor="end">−83.89%</text>
+    <rect x="496" y="171" width="380" height="10" rx="3" fill="#30363D"/>
+    <rect x="496" y="171" width="61" height="10" rx="3" fill="#3FB950"/>
+    <text x="496" y="201" class="c-dim">345,534 → 55,671 tokens · Scrooge</text>
 
-    <!-- Task 2 -->
-    <text x="496" y="220" class="c-white">Task 2: Cross-File Refactor (4 files, 2,860L)</text>
-    <rect x="496" y="229" width="320" height="12" rx="3" fill="#F85149" opacity="0.85"/>
-    <text x="824" y="239" class="c-dim">183.3k</text>
-    <rect x="496" y="246" width="61" height="12" rx="3" fill="#3FB950"/>
-    <text x="565" y="256" class="c-green">34.9k (-81.0% | 5.5/10 Coins)</text>
+    <text x="496" y="230" class="c-white">CRDT whiteboard feature</text>
+    <text x="876" y="230" class="c-green" text-anchor="end">−84.85%</text>
+    <rect x="496" y="241" width="380" height="10" rx="3" fill="#30363D"/>
+    <rect x="496" y="241" width="58" height="10" rx="3" fill="#3FB950"/>
+    <text x="496" y="271" class="c-dim">353,105 → 53,497 tokens · Stingy Lite</text>
 
-    <!-- Task 3 -->
-    <text x="496" y="288" class="c-white">Task 3: Flaky Webhook Debug (1,620L + logs)</text>
-    <rect x="496" y="297" width="320" height="12" rx="3" fill="#F85149" opacity="0.85"/>
-    <text x="824" y="307" class="c-dim">111.3k</text>
-    <rect x="496" y="314" width="62" height="12" rx="3" fill="#3FB950"/>
-    <text x="566" y="324" class="c-green">21.4k (-80.8% | 3.5/10 Coins)</text>
+    <text x="496" y="300" class="c-white">Codex · two bug fixes</text>
+    <text x="876" y="300" class="c-green" text-anchor="end">−3.82%</text>
+    <rect x="496" y="311" width="380" height="10" rx="3" fill="#30363D"/>
+    <rect x="496" y="311" width="365" height="10" rx="3" fill="#3FB950"/>
+    <text x="496" y="341" class="c-dim">191,228 → 183,916 tokens · Scrooge</text>
   </g>
 
   <!-- Aggregate Summary Box -->
   <g class="mono fade-4">
-    <rect x="496" y="348" width="388" height="114" rx="6" fill="#161B22" stroke="#3FB950" stroke-width="1.2"/>
-    <text x="512" y="372" class="c-white">SYNTHETIC TRACE MODEL BOUNDARIES:</text>
-    <text x="512" y="394" class="c-dim">Uncached Trace Tokens:     404.7k -&gt; 75.9k (-81.2%)</text>
-    <text x="512" y="414" class="c-green">Modeled Prompt-Cache $:    $0.568 -&gt; $0.053 (-90.7%)</text>
-    <text x="512" y="438" class="c-gold">Real 25-Session Audit:     -29.4% avoidable waste</text>
+    <rect x="496" y="365" width="380" height="89" rx="6" fill="#161B22" stroke="#3FB950" stroke-width="1.2"/>
+    <text x="512" y="389" class="c-white">CODEX SHELL OUTPUT · BYTES</text>
+    <text x="512" y="412" class="c-green">61,131 → 13,010 (−78.7%)</text>
+    <text x="512" y="435" class="c-dim">Both patches passed their tests.</text>
   </g>
 </svg>

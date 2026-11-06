@@ -2,11 +2,21 @@
 
 > **"Why burn 50,000 input tokens reading whole files when 400 tokens do trick?"**
 >
-> **Stingy Mode** gives coding agents a **10-Coin Budget** for file reads and tool calls. **Stingy Roast** audits the receipts from their local transcripts. See the [live Codex comparison](./benchmarks/codex-comparison.md) for measured usage.
+> **Stingy Mode** gives coding agents a **10-coin budget** for file reads and tool calls. `stingy roast` audits local transcripts and reports estimated token waste. `stingy usage` shows recorded usage and any cost estimates supplied by ccusage.
 
 <p align="center">
-  <img src="./assets/hero-demo.svg" width="880" alt="Stingy CLI Token Autopsy Receipt and Trace-Driven Benchmark Model" />
+  <img src="./assets/hero-demo.svg" width="880" alt="Sample Roast receipt and a bar chart of measured token usage across three benchmarks" />
 </p>
+
+The receipt uses the [public sample transcript](./benchmarks/fixtures/sample-session.jsonl). The chart compares recorded total tokens (input including cache plus output) with the control for each workload.
+
+| Workload | Control | With Stingy | Fewer tokens |
+| :--- | ---: | ---: | ---: |
+| [3,100-line bug hunt](#-multi-plugin-live-telemetry-comparison-npm-run-benchmarkplugins), Scrooge | 345,534 | 55,671 | **83.89%** |
+| [CRDT whiteboard feature](#-case-study-2-complex-feature-building-with-stingy-lite-realtime-crdt-whiteboard), Lite | 353,105 | 53,497 | **84.85%** |
+| [Two Codex bug fixes](./benchmarks/codex-comparison.md), Scrooge | 191,228 | 183,916 | **3.82%** |
+
+On the two Codex bug fixes, shell output fell from **61,131 to 13,010 bytes (78.7%)** and both patches passed their tests. Token savings varied by workload.
 
 <p align="center">
   <a href="#license"><img src="https://img.shields.io/badge/License-MIT-black.svg" alt="License: MIT" /></a>
