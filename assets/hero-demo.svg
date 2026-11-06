@@ -38,7 +38,7 @@
   <rect x="20" y="56" width="445" height="424" rx="8" class="panel"/>
   <g class="mono fade-1">
     <text x="34" y="78" class="c-green">$</text>
-    <text x="48" y="78" class="c-white">npx github:Kuro0No/stingy roast</text>
+    <text x="48" y="78" class="c-white">stingy roast sample-session.jsonl</text>
   </g>
 
   <g class="mono fade-2">
@@ -46,23 +46,23 @@
     <text x="34" y="119" class="c-gold">|          🪙 STINGY TOKEN AUTOPSY 🪙         |</text>
     <text x="34" y="136" class="c-dim">|      "Why burn 50k tokens when 400 do?"     |</text>
     <text x="34" y="152" class="c-dim">|---------------------------------------------|</text>
-    <text x="34" y="169" class="c-white">| LOGS SCANNED: 25 files (18,519 steps)       |</text>
+    <text x="34" y="169" class="c-white">| LOGS SCANNED: 1 file (13 steps)             |</text>
     <text x="34" y="185" class="c-dim">|---------------------------------------------|</text>
-    <text x="34" y="202" class="c-white">| Full-File Reads (No Range)    97x     $1.10 |</text>
-    <text x="34" y="219" class="c-white">| Duplicate File Re-Reads       56x     $0.44 |</text>
-    <text x="34" y="236" class="c-white">| Consecutive Cmd Retries        8x     $0.01 |</text>
-    <text x="34" y="253" class="c-white">| Frustration / Fix Prompts      4x     $0.11 |</text>
-    <text x="34" y="270" class="c-green">| Surgical Line-Range Reads    859x     $0.00 |</text>
-    <text x="34" y="287" class="c-green">| Targeted Grep Searches       210x     $0.00 |</text>
+    <text x="34" y="202" class="c-white">| Full-File Reads                1x    2,800 |</text>
+    <text x="34" y="219" class="c-white">| Duplicate File Re-Reads        1x    3,600 |</text>
+    <text x="34" y="236" class="c-white">| Consecutive Cmd Retries        1x    2,400 |</text>
+    <text x="34" y="253" class="c-white">| Frustration / Fix Prompts      1x      400 |</text>
+    <text x="34" y="270" class="c-green">| Surgical Line-Range Reads      2x        0 |</text>
+    <text x="34" y="287" class="c-green">| Targeted Grep Searches         1x        0 |</text>
     <text x="34" y="303" class="c-dim">|---------------------------------------------|</text>
-    <text x="34" y="320" class="c-white">| 10-COIN TURN BUDGET AVG:  9.96 / 10.0 Coins |</text>
-    <text x="34" y="337" class="c-white">| BANKRUPT TURNS (&gt;10c):      56 / 278 turns  |</text>
+    <text x="34" y="320" class="c-white">| 10-COIN TURN BUDGET AVG:  8.75 / 10.0 Coins |</text>
+    <text x="34" y="337" class="c-white">| BANKRUPT TURNS (&gt;10c):          1 / 2 turns |</text>
     <text x="34" y="353" class="c-dim">|---------------------------------------------|</text>
-    <text x="34" y="370" class="c-white">| EST. BASELINE COST (@$3/1M):          $5.64 |</text>
-    <text x="34" y="387" class="c-green">| WITH STINGY MODE (-29.4%):            $3.98 |</text>
-    <text x="34" y="404" class="c-red">| AVOIDABLE TOKEN WASTE:                $1.66 |</text>
+    <text x="34" y="370" class="c-white">| EST. TOOL CONTEXT TOKENS            14,690 |</text>
+    <text x="34" y="387" class="c-red">| AVOIDABLE WASTED TOKENS      9,200 (62.6%) |</text>
+    <text x="34" y="404" class="c-dim">| MODEL COST ESTIMATES          stingy usage |</text>
     <text x="34" y="420" class="c-dim">|---------------------------------------------|</text>
-    <text x="34" y="438" class="c-cyan">| DIAGNOSIS: THE GOLDFISH AGENT               |</text>
+    <text x="34" y="438" class="c-cyan">| DIAGNOSIS: CONTEXT OVER-SPENDER            |</text>
     <text x="34" y="456" class="c-gold">===============================================</text>
   </g>
 

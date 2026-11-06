@@ -100,7 +100,7 @@ export function analyzeLiveRun(fileName) {
 
   const bugsFoundCount = [foundJwtBug, foundRateBug, foundBackoffBug].filter(Boolean).length;
 
-  // Standard Sonnet API pricing: $3.00 / 1M uncached input, $0.30 / 1M cache read, $15.00 / 1M output
+  // Fixed example rates per million tokens for the replay.
   const totalCostUsd = Number(
     (
       (uncachedInputTokens * 3.0 + cachedInputTokens * 0.3 + outputTokens * 15.0) /
@@ -235,8 +235,10 @@ export function runPluginComparison() {
 if (process.argv[1] && process.argv[1].endsWith('compare-plugins.mjs')) {
   const { arms, execCheck } = runPluginComparison();
   console.log('\n🪙 HEAD-TO-HEAD PLUGIN & SKILL BENCHMARK (Live 3,100-Line Bug-Hunt Telemetry)\n');
+  console.log('Modeled USD uses $3 uncached input, $0.30 cached input, and $15 output per million tokens.');
+  console.log('The static ignore row reuses the baseline trace.\n');
   console.log(
-    '| Configuration | Uncached In Tok | Cached In Tok | Output Tok (Chars) | API Cost ($) | Cost Delta | Output Correctness |'
+    '| Configuration | Uncached In Tok | Cached In Tok | Output Tok (Chars) | Modeled USD | Modeled Cost Delta | Bugs Found |'
   );
   console.log('| :--- | ---: | ---: | ---: | ---: | ---: | :--- |');
   for (const a of arms) {
@@ -246,6 +248,6 @@ if (process.argv[1] && process.argv[1].endsWith('compare-plugins.mjs')) {
     );
   }
   console.log(
-    `\n✓ Executable Output Verification: ${execCheck.assertionsChecked}/${execCheck.assertionsChecked} functional unit assertions passed across all fixes.\n`
+    `\n✓ Reference fixes: ${execCheck.assertionsChecked}/${execCheck.assertionsChecked} assertions passed.\n`
   );
 }

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🪙 STINGY — A 10-Coin Tool Budget for AI Coding Agents</title>
-  <meta name="description" content="Caveman saves output prose. Ponytail saves output code. Stingy saves the 85% of your AI bill burned on input context & reckless tool calls." />
+  <meta name="description" content="A 10-coin tool budget for AI coding agents and an offline receipt for avoidable context waste." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -476,7 +476,7 @@
               <span>Enforces YAGNI code minimalism</span>
             </div>
             <div class="trinity-cell">
-              <span>LAYER 3 // INPUT &amp; TOOLS (85% COST)</span>
+              <span>LAYER 3 // INPUT &amp; TOOLS</span>
               <strong>🪙 stingy</strong>
               <span>10-Coin budget &amp; surgical reads</span>
             </div>
@@ -489,7 +489,7 @@
             <div class="receipt-header">
               <div class="receipt-title">🪙 STINGY TOKEN AUTOPSY 🪙</div>
               <div>"Why burn 50k tokens when 400 do?"</div>
-              <div id="rc-date">SESSION AUDIT // LOCAL LOGS</div>
+              <div id="rc-date">ILLUSTRATIVE USD SIMULATION</div>
             </div>
 
             <div class="receipt-row">
@@ -516,15 +516,15 @@
             <div class="receipt-divider"></div>
 
             <div class="receipt-total">
-              <span>RAW AGENT BILL:</span>
+              <span>MODELED BASELINE:</span>
               <span id="rc-raw">$4.62</span>
             </div>
             <div class="receipt-total receipt-total--saved">
-              <span id="rc-saved-label">WITH STINGY MODE (-81%):</span>
+              <span id="rc-saved-label">MODELED WITH STINGY:</span>
               <span id="rc-stingy">$0.88</span>
             </div>
             <div class="receipt-total receipt-total--burned">
-              <span>MONEY LIT ON FIRE:</span>
+              <span>MODELED COST DIFFERENCE:</span>
               <span id="rc-burned">$3.74</span>
             </div>
 
@@ -618,7 +618,8 @@
       <div class="container">
         <div class="section__head">
           <span class="eyebrow">[ 03 — LIVE 7-ARM TELEMETRY BENCHMARK (3,100-LINE BUG HUNT) ]</span>
-          <h2 class="section__title">Real recorded hardware tokens: None vs. Caveman vs. Ponytail vs. Stingy</h2>
+          <h2 class="section__title">Recorded token usage for Caveman, Ponytail, and Stingy</h2>
+          <p>USD values use fixed example rates. The static ignore row reuses the baseline trace.</p>
         </div>
 
         <div class="panel" style="overflow-x: auto;">
@@ -629,8 +630,8 @@
                 <th style="padding: 10px 8px; text-align: right;">Uncached In Tok</th>
                 <th style="padding: 10px 8px; text-align: right;">Cached In Tok</th>
                 <th style="padding: 10px 8px; text-align: right;">Output Tok (Report)</th>
-                <th style="padding: 10px 8px; text-align: right;">Real API Cost</th>
-                <th style="padding: 10px 8px; text-align: right;">Cost Delta</th>
+                <th style="padding: 10px 8px; text-align: right;">Modeled USD</th>
+                <th style="padding: 10px 8px; text-align: right;">Modeled Delta</th>
                 <th style="padding: 10px 8px;">Output Correctness</th>
               </tr>
             </thead>
@@ -782,6 +783,7 @@
       const ascii = [
         '=================================================',
         '|          🪙 STINGY TOKEN AUTOPSY 🪙           |',
+        '|         ILLUSTRATIVE USD SIMULATION           |',
         '|      "Why burn 50k tokens when 400 do?"       |',
         '|-----------------------------------------------|',
         `| Full-File Reads:         ${document.getElementById('rc-reads').textContent.padStart(20)} |`,
@@ -789,9 +791,9 @@
         `| Rage Prompts:            ${document.getElementById('rc-rage').textContent.padStart(20)} |`,
         `| Uncompacted Tax:         ${document.getElementById('rc-tax').textContent.padStart(20)} |`,
         '|-----------------------------------------------|',
-        `| RAW AGENT BILL:          ${document.getElementById('rc-raw').textContent.padStart(20)} |`,
-        `| WITH STINGY MODE (-81%): ${document.getElementById('rc-stingy').textContent.padStart(20)} |`,
-        `| MONEY LIT ON FIRE:       ${document.getElementById('rc-burned').textContent.padStart(20)} |`,
+        `| MODELED BASELINE:        ${document.getElementById('rc-raw').textContent.padStart(20)} |`,
+        `| MODELED WITH STINGY:     ${document.getElementById('rc-stingy').textContent.padStart(20)} |`,
+        `| MODELED COST DIFFERENCE: ${document.getElementById('rc-burned').textContent.padStart(20)} |`,
         '|-----------------------------------------------|',
         `| ${document.getElementById('rc-archetype').textContent.padEnd(45)} |`,
         '================================================='

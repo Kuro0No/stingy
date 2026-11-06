@@ -339,7 +339,7 @@ function isHumanPromptRecord(step) {
 /**
  * Analyze one or more sessions honestly.
  */
-export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
+export function analyzeJsonlLines(input = [], pricePerMillionInput = null) {
   const sessions =
     Array.isArray(input) && input.length > 0 && Array.isArray(input[0]) ? input : [input];
 
@@ -611,7 +611,9 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = 3.0) {
   const clampedWastedTokens = Math.min(totalTokens, wastedTokens);
   const stingyTokens = Math.max(0, totalTokens - clampedWastedTokens);
 
-  const toUsd = (tok) => Number(((tok / 1_000_000) * pricePerMillionInput).toFixed(4));
+  const toUsd = (tok) => Number.isFinite(pricePerMillionInput) && pricePerMillionInput >= 0
+    ? Number(((tok / 1_000_000) * pricePerMillionInput).toFixed(4))
+    : null;
 
   const fullReadUsd = toUsd(readWastedTokens);
   const dupReadUsd = toUsd(dupReadWastedTokens);

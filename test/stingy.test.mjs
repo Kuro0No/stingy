@@ -113,7 +113,7 @@ test('Claude Audit Regression #1: Empty HOME directory outputs honest "No local 
   }
 });
 
-test('Claude Audit Regression #2: Perfect user log (60 surgical reads with offset/limit, 0 full reads) yields 0% waste and $0.00 wasted', () => {
+test('Claude Audit Regression #2: Surgical reads within range yield zero estimated waste', () => {
   const lines = [];
   for (let i = 1; i <= 60; i++) {
     lines.push(
@@ -139,7 +139,7 @@ test('Claude Audit Regression #2: Perfect user log (60 surgical reads with offse
   assert.equal(stats.fullFileReads, 0);
   assert.equal(stats.duplicateReads, 0);
   assert.equal(stats.wastedTokens, 0);
-  assert.equal(stats.wastedUsd, 0);
+  assert.equal(stats.wastedUsd, null);
   assert.equal(stats.savingsPct, 0);
 });
 
@@ -375,7 +375,7 @@ test('Codex Round-3 Regression #3: Receipt line-item USD (fullReadUsd) matches t
     })
   ];
 
-  const stats = analyzeJsonlLines(singleHugeReadSession);
+  const stats = analyzeJsonlLines(singleHugeReadSession, 3);
   assert.equal(stats.fullReadUsd, stats.wastedUsd, 'Line-item fullReadUsd must equal total wastedUsd');
   assert.ok(stats.fullReadUsd > 0.03, `Expected >$0.03 for 2,000-line read, got $${stats.fullReadUsd}`);
 });
@@ -476,7 +476,7 @@ test('Codex Round-4 Regression #2: Failed command retry without tool_result keep
       tool_calls: [{ name: 'run_command', arguments: { CommandLine: 'npm test' } }]
     })
   ];
-  const stats = analyzeJsonlLines(twoFailedRetriesNoResult);
+  const stats = analyzeJsonlLines(twoFailedRetriesNoResult, 3);
   assert.equal(stats.commandRetries, 1);
   assert.equal(stats.retryUsd, stats.wastedUsd, `Expected retryUsd (${stats.retryUsd}) === wastedUsd (${stats.wastedUsd})`);
 });
@@ -522,16 +522,17 @@ test('Codex Round-5 Regression #1: Command argument case sensitivity is preserve
   assert.equal(analyzeJsonlLines(caseDiffArgs).commandRetries, 0);
 });
 
-test('Codex Round-5 Regression #2: Sub-cent receipt line items switch to 4 decimals so two $0.00 items never sum to $0.01', () => {
+test('Roast receipt reports whole token estimates whose line items add to total waste', () => {
   const fixturePath = path.join(REPO_ROOT, 'benchmarks', 'fixtures', 'sample-session.jsonl');
   const stdout = execFileSync(process.execPath, [CLI_PATH, 'roast', fixturePath], {
     encoding: 'utf8'
   });
-  // Verify every dollar figure on the sample fixture receipt uses consistent 4-decimal precision
-  assert.match(stdout, /\$0\.0084/);
-  assert.match(stdout, /\$0\.0108/);
-  assert.match(stdout, /\$0\.0072/);
-  assert.match(stdout, /\$0\.0276/);
+  assert.match(stdout, /Full-File Reads[^\n]*\b2,800\b/);
+  assert.match(stdout, /Duplicate File Re-Reads[^\n]*\b3,600\b/);
+  assert.match(stdout, /Consecutive Cmd Retries[^\n]*\b2,400\b/);
+  assert.match(stdout, /Frustration[^\n]*\b400\b/);
+  assert.match(stdout, /AVOIDABLE WASTED TOKENS[^\n]*\b9,200\b/);
+  assert.doesNotMatch(stdout, /\$/);
 });
 
 test('Retry matching preserves whitespace in quoted shell arguments', () => {
@@ -547,26 +548,34 @@ test('Retry matching preserves whitespace in quoted shell arguments', () => {
   assert.equal(analyzeJsonlLines([failed(first), failed('')]).commandRetries, 0);
 });
 
-test('The receipt adds precision when cent rounding would inflate the baseline', () => {
+test('Roast keeps mixed-model waste in tokens even when both model names are present', () => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'stingy-receipt-'));
   try {
     const file = path.join(temp, 'session.jsonl');
     const records = [
       { type: 'user', content: 'fix it ' + 'x'.repeat(8493) },
       {
-        tool_calls: [
-          { id: 'read-1', name: 'Read', arguments: { file_path: 'src/large.ts' } }
-        ]
+        type: 'assistant',
+        message: {
+          model: 'claude-opus-5-5',
+          content: [{ type: 'tool_use', id: 'read-1', name: 'Read', input: { file_path: 'src/large.ts' } }]
+        }
       },
-      { tool_use_id: 'read-1', content: ('x'.repeat(121) + '\n').repeat(300) }
+      { tool_use_id: 'read-1', content: ('x'.repeat(121) + '\n').repeat(300) },
+      {
+        type: 'assistant',
+        message: {
+          model: 'claude-sonnet-5-5',
+          content: [{ type: 'tool_use', id: 'read-2', name: 'Read', input: { file_path: 'src/large.ts' } }]
+        }
+      }
     ];
     fs.writeFileSync(file, records.map((record) => JSON.stringify(record)).join('\n'));
     const stdout = execFileSync(process.execPath, [CLI_PATH, 'roast', file], { encoding: 'utf8' });
-    assert.match(stdout, /Full-File Reads[^\n]*\$0\.0255/);
-    assert.match(stdout, /Frustration[^\n]*\$0\.0255/);
-    assert.match(stdout, /BASELINE COST[^\n]*\$0\.0530/);
-    assert.match(stdout, /WITH STINGY MODE[^\n]*\$0\.0020/);
-    assert.match(stdout, /AVOIDABLE TOKEN WASTE:[^\n]*\$0\.0510/);
+    assert.match(stdout, /Full-File Reads[^\n]*1x/);
+    assert.match(stdout, /Duplicate File Re-Reads[^\n]*1x/);
+    assert.match(stdout, /For usage and model-based estimates, run stingy usage/);
+    assert.doesNotMatch(stdout, /\$/);
   } finally {
     fs.rmSync(temp, { recursive: true, force: true });
   }

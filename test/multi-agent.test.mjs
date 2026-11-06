@@ -143,7 +143,7 @@ test('Roast reads Copilot tool events with view ranges and failures without outp
     encoding: 'utf8'
   });
   assert.match(stdout, /Surgical Line-Range Reads\s+1x/);
-  assert.match(stdout, /Consecutive Cmd Retries\s+1x\s+\$0\.0072/);
+  assert.match(stdout, /Consecutive Cmd Retries\s+1x\s+2,400/);
 }));
 
 test('Pi and OpenClaw file transcripts match toolCall and toolResult entries', () => withFixture((dir) => {

@@ -18,8 +18,6 @@ import { readUsageReport, USAGE_SOURCES } from '../src/usage.mjs';
 
 export { findLocalLogs };
 
-const INPUT_USD_PER_MILLION_TOKENS = 3;
-
 const C = {
   reset: '\x1b[0m',
   bold: '\x1b[1m',
@@ -42,40 +40,6 @@ function padRight(str, len) {
 function padLeft(str, len) {
   const s = String(str);
   return s.length >= len ? s.slice(0, len) : ' '.repeat(len - s.length) + s;
-}
-
-function formatReceiptCosts(stats) {
-  const costsInMicros = [
-    stats.readWastedTokens,
-    stats.dupReadWastedTokens,
-    stats.retryWastedTokens,
-    stats.rageWastedTokens,
-    stats.totalTokens,
-    stats.stingyTokens,
-    stats.wastedTokens
-  ].map((tokens) => tokens * INPUT_USD_PER_MILLION_TOKENS);
-
-  const baselineMicros = stats.totalTokens * INPUT_USD_PER_MILLION_TOKENS;
-  const hasSubCentCost = costsInMicros.some((micros) => micros > 0 && micros < 5_000);
-  let decimals = (baselineMicros > 0 && baselineMicros < 50_000) || hasSubCentCost ? 4 : 2;
-  const roundCosts = (places) =>
-    costsInMicros.map((micros) => Math.round(micros / 10 ** (6 - places)));
-  let rounded = roundCosts(decimals);
-
-  // Increase precision whenever rounding would make the receipt totals disagree.
-  while (decimals < 6) {
-    const [read, duplicate, retry, rage, baseline, remaining, waste] = rounded;
-    if (read + duplicate + retry + rage === waste && remaining + waste === baseline) break;
-    decimals += 2;
-    rounded = roundCosts(decimals);
-  }
-
-  const formatUsd = (units) => `$${(units / 10 ** decimals).toFixed(decimals)}`;
-  const [fullReadUsd, dupReadUsd, retryUsd, rageUsd, rawUsd, stingyUsd, wastedUsd] =
-    rounded.map(formatUsd);
-  return {
-    fullReadUsd, dupReadUsd, retryUsd, rageUsd, rawUsd, stingyUsd, wastedUsd, zeroUsd: formatUsd(0)
-  };
 }
 
 function reportArguments(allowed) {
@@ -187,7 +151,7 @@ function runRoast() {
     }
   }
 
-  const s = analyzeJsonlLines(sessionList, INPUT_USD_PER_MILLION_TOKENS);
+  const s = analyzeJsonlLines(sessionList);
 
   if (s.totalTurnsScored === 0) {
     console.log('');
@@ -211,12 +175,12 @@ function runRoast() {
     diagnosis = 'DISCIPLINED CODER (Low Context Waste)';
   }
 
-  const { fullReadUsd, dupReadUsd, retryUsd, rageUsd, rawUsd, stingyUsd, wastedUsd, zeroUsd } =
-    formatReceiptCosts(s);
   const readWasteCount = s.fullFileReads + s.mediumReads + s.forbiddenReads;
   const readWasteLabel = s.mediumReads || s.forbiddenReads
     ? 'Full/Medium/Forbidden Reads'
     : 'Full-File Reads (No Range)';
+  const row = (label, count, tokens) =>
+    `  | ${padRight(label, 27)} ${padLeft(count + 'x', 5)}  ${tokens.toLocaleString('en-US').padStart(10)} |`;
 
   console.log('');
   console.log(`${C.yellow}${C.bold}  =================================================${C.reset}`);
@@ -227,26 +191,14 @@ function runRoast() {
     `  | LOGS SCANNED: ${padRight(`${sessionList.length} files (${s.totalSteps} steps)`, 31)} |`
   );
   console.log(`  |-----------------------------------------------|`);
-  console.log(`  | ITEM                         QTY     EST. USD |`);
+  console.log(`  | ITEM                         QTY   EST. WASTE |`);
   console.log(`  |-----------------------------------------------|`);
-  console.log(
-    `  | ${padRight(readWasteLabel, 27)} ${padLeft(readWasteCount + 'x', 5)}   ${fullReadUsd.padStart(9)} |`
-  );
-  console.log(
-    `  | Duplicate File Re-Reads     ${padLeft(s.duplicateReads + 'x', 5)}   ${dupReadUsd.padStart(9)} |`
-  );
-  console.log(
-    `  | Consecutive Cmd Retries     ${padLeft(s.commandRetries + 'x', 5)}   ${retryUsd.padStart(9)} |`
-  );
-  console.log(
-    `  | Frustration / Fix Prompts   ${padLeft(s.rageMessages + 'x', 5)}   ${rageUsd.padStart(9)} |`
-  );
-  console.log(
-    `  | ${C.green}Surgical Line-Range Reads   ${padLeft(s.surgicalReads + 'x', 5)}   ${zeroUsd.padStart(9)}${C.reset} |`
-  );
-  console.log(
-    `  | ${C.green}Targeted Grep Searches      ${padLeft(s.grepCalls + 'x', 5)}   ${zeroUsd.padStart(9)}${C.reset} |`
-  );
+  console.log(row(readWasteLabel, readWasteCount, s.readWastedTokens));
+  console.log(row('Duplicate File Re-Reads', s.duplicateReads, s.dupReadWastedTokens));
+  console.log(row('Consecutive Cmd Retries', s.commandRetries, s.retryWastedTokens));
+  console.log(row('Frustration / Fix Prompts', s.rageMessages, s.rageWastedTokens));
+  console.log(`${C.green}${row('Surgical Line-Range Reads', s.surgicalReads, 0)}${C.reset}`);
+  console.log(`${C.green}${row('Targeted Grep Searches', s.grepCalls, 0)}${C.reset}`);
   console.log(`  |-----------------------------------------------|`);
   console.log(
     `  | 10-COIN TURN BUDGET SCORE:  ${padLeft(`${s.avgTurnCoins} / 10.0 Coins`, 17)} |`
@@ -256,23 +208,16 @@ function runRoast() {
   );
   console.log(`  |-----------------------------------------------|`);
   console.log(
-    `  | EST. TOKENS PROCESSED      ${padLeft(s.totalTokens.toLocaleString('en-US'), 18)} |`
+    `  | EST. TOOL CONTEXT TOKENS   ${padLeft(s.totalTokens.toLocaleString('en-US'), 18)} |`
   );
   console.log(
-    `  | AVOIDABLE WASTED TOKENS    ${padLeft(s.wastedTokens.toLocaleString('en-US'), 18)} |`
-  );
-  console.log(`  |-----------------------------------------------|`);
-  console.log(`  | EST. BASELINE COST (@$${INPUT_USD_PER_MILLION_TOKENS}/1M):   ${rawUsd.padStart(14)} |`);
-  console.log(
-    `  | ${C.green}WITH STINGY MODE (${padRight(`-${s.savingsPct}%):`, 9)}   ${stingyUsd.padStart(14)}${C.reset} |`
-  );
-  console.log(
-    `  | ${C.red}${C.bold}AVOIDABLE TOKEN WASTE:         ${wastedUsd.padStart(14)}${C.reset} |`
+    `  | AVOIDABLE WASTED TOKENS    ${padLeft(`${s.wastedTokens.toLocaleString('en-US')} (${s.savingsPct}%)`, 18)} |`
   );
   console.log(`  |-----------------------------------------------|`);
   console.log(`  | DIAGNOSIS:                                    |`);
   console.log(`  | ${C.cyan}${C.bold}${padRight(diagnosis, 45)}${C.reset} |`);
   console.log(`${C.yellow}${C.bold}  =================================================${C.reset}`);
+  console.log('  Estimated waste is in tokens. For usage and model-based estimates, run stingy usage.');
   console.log('');
 }
 
