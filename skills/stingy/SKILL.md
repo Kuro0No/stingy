@@ -1,64 +1,44 @@
 ---
 name: stingy
-description: Stingy Mode for AI coding agents. Use a per-turn Coin Budget, targeted line reads, and quiet tests to reduce avoidable context. Trigger with /stingy [lite|strict|scrooge]; use /stingy-roast to audit transcripts.
+description: Stingy Mode for AI coding agents. Fewer round trips and a lean context - search and read in one call, batch independent calls, read small files once, quiet test output, per-turn Coin Budget. Trigger with /stingy [lite|strict|scrooge]; use /stingy-roast to audit transcripts.
 ---
 
 # 🪙 Stingy Mode — The Tightwad Accountant for AI Agents
 
-> *"Spend coins on the lines that matter."*
+Every tool call re-sends the whole conversation, and every tool output stays in it for all later calls. The cheapest session makes the fewest round trips and keeps outputs small. Count calls, not only lines.
 
-When **Stingy Mode** is active, you act as a ruthless, surgical engineer whose own salary is deducted for every wasted input token and redundant tool call.
+## 1. Round Trips First
 
----
+- **Search and read in one call:** `grep -n -C 25 "<symbol>" <path>` (Grep with context, or `rg -n -A 40`) instead of a search followed by a read.
+- **Batch:** put independent searches and reads in the same turn as parallel tool calls.
+- **Small files once:** read a file under 250 lines whole in one call; never slice it over several calls.
+- **Quiet test runs:** run tests quietly (`--silent`, `| tail -30`): once to see the failures, fix everything they show, then once more to confirm. Never finish a task without a passing run.
+- **No re-reads:** never re-read an unchanged file already in context; re-read only the part a tool, formatter or the user changed.
 
-## 1. The Coin Budget Contract (10.0 Coins / Turn)
+## 2. The Coin Budget Contract (10.0 Coins / Turn)
 
-Each worker starts a user turn with **10.0 Coins**. A single-agent turn has one allowance. Every tool action has a cost:
+| Action | Coins |
+| :--- | :--- |
+| Search, with context lines | 0.5 |
+| Line-range read (≤ 120 lines) | 1.0 |
+| Whole file over 250 lines | 4.0 |
+| Re-read of an unchanged file | 5.0 |
+| Re-run of a failing command, unchanged | 4.0 |
+| Lockfiles, `dist/`, `node_modules/`, minified bundles | 10.0 (bankrupt) |
 
-| Action | Coin Cost | Stingy Rule |
-| :--- | :--- | :--- |
-| `grep` / `ripgrep` with path & max results | **0.5 Coins** | **Always do this first** to locate exact line numbers. |
-| `read_file` with exact line range (`≤ 120 lines`) | **1.0 Coin** | Surgical read. Preferred way to inspect code. |
-| `read_file` on a full file (`> 250 lines`) | **4.0 Coins** | **TAXED HEAVILY.** Never read an entire large file unless editing > 60% of it. |
-| Re-reading a file already in conversation context | **5.0 Coins** | **FORBIDDEN.** Use what is already in your context window. Re-read only the part that changed since (a tool, formatter, test run or the user edited it). |
-| Blind command retry after a failure | **4.0 Coins** | **PENALTY.** Read the error message carefully; fix the root cause on the first retry. |
-| Reading lockfiles, `dist/`, `node_modules/`, or minified bundles | **10.0 Coins** | **INSTANT BANKRUPTCY.** Never touch generated or lock files. |
+Each worker gets 10.0 Coins per user turn. Over budget, the coordinator asks the user before spending more; a subagent cannot ask, so it stops and returns what it found plus what it still needs (files, line ranges). Give subagents narrow briefs (exact files, symbols, the question); starting one costs the coordinator 1.0 Coin.
 
-If the coordinator would exceed **10.0 Coins**, stop and ask the user before spending more. A subagent cannot ask the user: when it would exceed its allowance, it stops reading and returns what it found plus what it still needs (files and line ranges), and the coordinator decides whether to spend more.
-
-For parallel work, give each subagent a distinct, narrow task (exact files, symbols and the question) and its own 10-coin allowance for the current user turn; a broad brief bankrupts it. Starting a subagent is a tool call for the coordinator (1.0 Coin). The coordinator keeps its own allowance. Pass findings to workers when possible and report team spend separately from each worker's budget. Keep retries within the original worker's allowance.
-
----
-
-## 2. Modes (`/stingy [mode]`)
+## 3. Modes (`/stingy [mode]`)
 
 Default mode is **`strict`**. Switch anytime with `/stingy lite`, `/stingy strict`, or `/stingy scrooge`.
 
 ### `/stingy lite` — Surgical Engineer
-- Always `grep` for symbol/line numbers before calling `read_file`.
-- Read at most `120` lines around the target symbol (`StartLine` / `EndLine`).
-- Batch independent tool calls to reduce model round-trips.
-- No receipt footer required unless requested.
+Section 1 only; the 10.0 Coin Budget is a guide, not a stop.
 
 ### `/stingy strict` (Default) — Tightwad Accountant
-- All rules of `lite`, plus:
-- Strictly enforce the **10.0 Coin Budget** per turn.
-- Never run exploratory "let me read 6 files just in case" sweeps.
-- End with one **Stingy Receipt** based on observed tool calls. Report token or dollar savings only when measured.
-  `🪙 [STINGY: 2.5/10 Coins | 1 grep, 1 bounded read (80 lines)]`
+`lite` plus the 10.0 Coin Budget; no "just in case" sweeps.
 
-### `/stingy scrooge` — Maximum Miser (Pairs with `caveman` + `ponytail`)
-- All rules of `strict`, plus:
-- **Zero speculative tool calls:** If you can answer or write the patch from context already visible, make `0` tool calls (`0.0/10 Coins`).
-- **One-Shot Edit Mandate:** Plan the entire edit before touching the file. Multiple tiny edits to the same region in separate turns are fined `4.0 Coins`.
-- Keep output explanations to `≤ 3` bullet points so input history stays tiny for future turns.
-- Use the Scrooge receipt style.
-  `🪙 [SCROOGE: 1.5/10 Coins | 1 grep, 1 bounded read | UNDER BUDGET 🏆]`
+### `/stingy scrooge` — Maximum Miser
+`strict` plus zero speculative calls (answer from visible context when you can), plan the whole edit before touching a file, and at most 3 bullets of explanation.
 
----
-
-## 3. Compatibility with `caveman` and `ponytail`
-
-Stingy governs **HOW YOU GATHER CONTEXT AND CALL TOOLS (Input/Tool layer)**, never conflicting with output style skills:
-- If **`caveman`** is active: Keep Caveman's telegraphic prose for your text AND append the 1-line `🪙 [STINGY]` receipt at the bottom.
-- If **`ponytail`** is active: Keep Ponytail's YAGNI minimal code generation AND use Stingy's surgical `grep -> line-range read` workflow.
+No receipt footer: `/stingy-roast` measures the real numbers. Stingy only governs how you gather context and call tools, so it pairs with `caveman` (output prose) and `ponytail` (code size).

@@ -146,9 +146,9 @@ The [Gemini 3.8 Flash Medium traces](./benchmarks/fixtures/MANIFEST.json) record
 | Slash Command | Turn Budget | Best Used For | Key Rules Enforced |
 | :--- | :---: | :--- | :--- |
 | **`/stingy-build`** | **12.0 Coins** | **Feature building, UI scaffolding, multi-file refactors** | Targeted search, reads of up to 120 lines, one quiet verification command, and a `STINGY-BUILD` receipt. |
-| **`/stingy lite`** | **10.0 Coins** | Targeted context gathering | Search first, read up to 120 lines, and batch independent tool calls. Receipt on request. |
-| **`/stingy`** (or `/stingy strict`) | **10.0 Coins** | Daily coding, debugging, PR reviews | Inherits the general lite rules, limits exploratory reads, and adds a coin receipt. |
-| **`/stingy scrooge`** | **10.0 Coins** | Focused bug hunts | Inherits strict rules, avoids speculative calls, plans the patch before editing, and uses a Scrooge receipt. |
+| **`/stingy lite`** | **10.0 Coins** (guide) | Targeted context gathering | Fewest round trips: search and read in one call (`grep -n -C 25`), batch independent calls, read files under 250 lines once, run tests quietly (once to see failures, once to confirm). |
+| **`/stingy`** (or `/stingy strict`) | **10.0 Coins** | Daily coding, debugging, PR reviews | Lite rules plus the coin budget; no exploratory sweeps. No receipt footer: `/stingy-roast` measures the real numbers. |
+| **`/stingy scrooge`** | **10.0 Coins** | Focused bug hunts | Strict rules, no speculative calls, plans the whole patch before editing, at most 3 bullets of explanation. |
 | **`/stingy-roast`** | **Audit Mode** | **In-chat session token autopsy** | Runs the offline transcript analyzer and prints your ASCII Token Autopsy Receipt + Archetype diagnosis inside chat. |
 
 ### 2. Terminal CLI Commands (`npx github:Kuro0No/stingy <cmd>`)
