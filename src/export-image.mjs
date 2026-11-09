@@ -23,7 +23,6 @@ export function renderReceiptSvg(data) {
     commandRetries = 0,
     retryWastedTokens = 0,
     rageMessages = 0,
-    rageWastedTokens = 0,
     surgicalReads = 0,
     grepCalls = 0,
     avgTurnCoins = 0,
@@ -40,7 +39,7 @@ export function renderReceiptSvg(data) {
     { label: readWasteLabel, qty: `${readWasteCount}x`, val: `${fmt(readWastedTokens)} tok`, color: readWastedTokens > 0 ? '#D9381E' : '#111110' },
     { label: 'Duplicate File Re-Reads', qty: `${duplicateReads}x`, val: `${fmt(dupReadWastedTokens)} tok`, color: dupReadWastedTokens > 0 ? '#D9381E' : '#111110' },
     { label: 'Consecutive Cmd Retries', qty: `${commandRetries}x`, val: `${fmt(retryWastedTokens)} tok`, color: retryWastedTokens > 0 ? '#D9381E' : '#111110' },
-    { label: 'Frustration / Fix Prompts', qty: `${rageMessages}x`, val: `${fmt(rageWastedTokens)} tok`, color: rageWastedTokens > 0 ? '#D9381E' : '#111110' },
+    { label: 'Fix-like prompts (signal only)', qty: `${rageMessages}x`, val: 'Excluded', color: '#5C5A54' },
     { label: 'Surgical Line-Range Reads', qty: `${surgicalReads}x`, val: '0 tok', color: '#126E48' },
     { label: 'Targeted Grep Searches', qty: `${grepCalls}x`, val: '0 tok', color: '#126E48' }
   ];
@@ -84,10 +83,10 @@ export function renderReceiptSvg(data) {
   <line x1="52" y1="412" x2="584" y2="412" stroke="#111110" stroke-width="1.5" stroke-dasharray="6,4"/>
 
   <!-- Coin Budget Section -->
-  <text x="56" y="442" fill="#111110" font-family="'JetBrains Mono', 'IBM Plex Mono', monospace" font-size="14" font-weight="700">10-COIN TURN BUDGET SCORE:</text>
+  <text x="56" y="442" fill="#111110" font-family="'JetBrains Mono', 'IBM Plex Mono', monospace" font-size="14" font-weight="700">AVG COINS PER WORKER TURN:</text>
   <text x="584" y="442" fill="#111110" font-family="'JetBrains Mono', 'IBM Plex Mono', monospace" font-size="14" font-weight="800" text-anchor="end">${escapeXml(`${avgTurnCoins} / 10.0 Coins`)}</text>
 
-  <text x="56" y="468" fill="#5C5A54" font-family="'JetBrains Mono', 'IBM Plex Mono', monospace" font-size="13" font-weight="600">BANKRUPT TURNS (&gt;10 Coins):</text>
+  <text x="56" y="468" fill="#5C5A54" font-family="'JetBrains Mono', 'IBM Plex Mono', monospace" font-size="13" font-weight="600">BANKRUPT WORKER TURNS:</text>
   <text x="584" y="468" fill="#D9381E" font-family="'JetBrains Mono', 'IBM Plex Mono', monospace" font-size="13" font-weight="700" text-anchor="end">${escapeXml(`${bankruptTurns} / ${totalTurnsScored} turns`)}</text>
 
   <line x1="52" y1="488" x2="584" y2="488" stroke="#111110" stroke-width="1.5" stroke-dasharray="6,4"/>
@@ -256,7 +255,7 @@ export function renderReceiptPng(data) {
     ['FULL/MEDIUM READS', `${data.readWasteCount || 0}X`, `${fmt(data.readWastedTokens)} TOK`, data.readWastedTokens > 0],
     ['DUPLICATE RE-READS', `${data.duplicateReads || 0}X`, `${fmt(data.dupReadWastedTokens)} TOK`, data.dupReadWastedTokens > 0],
     ['CMD RETRY LOOPS', `${data.commandRetries || 0}X`, `${fmt(data.retryWastedTokens)} TOK`, data.retryWastedTokens > 0],
-    ['RAGE / FIX PROMPTS', `${data.rageMessages || 0}X`, `${fmt(data.rageWastedTokens)} TOK`, data.rageWastedTokens > 0],
+    ['FIX-LIKE PROMPTS', `${data.rageMessages || 0}X`, 'EXCLUDED', false],
     ['SURGICAL READS', `${data.surgicalReads || 0}X`, '0 TOK', false],
     ['GREP SEARCHES', `${data.grepCalls || 0}X`, '0 TOK', false]
   ];
@@ -271,10 +270,10 @@ export function renderReceiptPng(data) {
 
   fillRect(40, 314, width - 88, 2, 17, 17, 16);
 
-  drawText('10-COIN TURN BUDGET:', 42, 332, 17, 17, 16, 2);
+  drawText('COINS / WORKER TURN:', 42, 332, 17, 17, 16, 2);
   drawText(`${data.avgTurnCoins || 0} / 10.0`.padStart(12, ' '), 365, 332, 17, 17, 16, 2);
 
-  drawText('BANKRUPT TURNS:', 42, 362, 92, 90, 84, 2);
+  drawText('BANKRUPT WORKER TURNS:', 42, 362, 92, 90, 84, 2);
   drawText(`${data.bankruptTurns || 0} / ${data.totalTurnsScored || 0}`.padStart(12, ' '), 365, 362, 217, 56, 30, 2);
 
   fillRect(40, 390, width - 88, 2, 17, 17, 16);

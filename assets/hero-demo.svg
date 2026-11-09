@@ -55,15 +55,15 @@
     <text x="34" y="202" class="c-white">| Full-File Reads (No Range)     1x       2,800 |</text>
     <text x="34" y="219" class="c-white">| Duplicate File Re-Reads        1x       3,600 |</text>
     <text x="34" y="236" class="c-white">| Consecutive Cmd Retries        1x       2,400 |</text>
-    <text x="34" y="253" class="c-white">| Frustration / Fix Prompts      1x         400 |</text>
+    <text x="34" y="253" class="c-dim">| Fix-like prompts (signal)      1x    excluded |</text>
     <text x="34" y="270" class="c-green">| Surgical Line-Range Reads      2x           0 |</text>
     <text x="34" y="287" class="c-green">| Targeted Grep Searches         1x           0 |</text>
     <text x="34" y="303" class="c-dim">|-----------------------------------------------|</text>
-    <text x="34" y="320" class="c-white">| 10-COIN TURN BUDGET SCORE     8.75 / 10 Coins |</text>
-    <text x="34" y="337" class="c-white">| BANKRUPT TURNS (&gt;10c)              1 / 2 turns |</text>
+    <text x="34" y="320" class="c-white">| AVG COINS / WORKER TURN       8.75 / 10 Coins |</text>
+    <text x="34" y="337" class="c-white">| BANKRUPT WORKER TURNS             1 / 2 turns |</text>
     <text x="34" y="353" class="c-dim">|-----------------------------------------------|</text>
-    <text x="34" y="370" class="c-white">| EST. TOOL CONTEXT TOKENS               14,690 |</text>
-    <text x="34" y="387" class="c-red">| AVOIDABLE WASTED TOKENS         9,200 (62.6%) |</text>
+    <text x="34" y="370" class="c-white">| EST. TOOL CONTEXT TOKENS               14,290 |</text>
+    <text x="34" y="387" class="c-red">| AVOIDABLE WASTED TOKENS         8,800 (61.6%) |</text>
     <text x="34" y="404" class="c-dim">| MODEL COST ESTIMATES             stingy usage |</text>
     <text x="34" y="420" class="c-dim">|-----------------------------------------------|</text>
     <text x="34" y="438" class="c-cyan">| DIAGNOSIS: CONTEXT OVER-SPENDER               |</text>

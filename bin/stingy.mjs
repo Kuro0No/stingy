@@ -209,15 +209,14 @@ function runRoast() {
   console.log(row(readWasteLabel, readWasteCount, s.readWastedTokens));
   console.log(row('Duplicate File Re-Reads', s.duplicateReads, s.dupReadWastedTokens));
   console.log(row('Consecutive Cmd Retries', s.commandRetries, s.retryWastedTokens));
-  console.log(row('Frustration / Fix Prompts', s.rageMessages, s.rageWastedTokens));
   console.log(`${C.green}${row('Surgical Line-Range Reads', s.surgicalReads, 0)}${C.reset}`);
   console.log(`${C.green}${row('Targeted Grep Searches', s.grepCalls, 0)}${C.reset}`);
   console.log(`  |-----------------------------------------------|`);
   console.log(
-    `  | 10-COIN TURN BUDGET SCORE:  ${padLeft(`${s.avgTurnCoins} / 10.0 Coins`, 17)} |`
+    `  | AVG COINS PER WORKER TURN: ${`${s.avgTurnCoins} / 10.0 Coins`.padStart(18)} |`
   );
   console.log(
-    `  | BANKRUPT TURNS (>10 Coins): ${padLeft(`${s.bankruptTurns} / ${s.totalTurnsScored} turns`, 17)} |`
+    `  | BANKRUPT WORKER TURNS:     ${padLeft(`${s.bankruptTurns} / ${s.totalTurnsScored} turns`, 17)} |`
   );
   console.log(`  |-----------------------------------------------|`);
   console.log(
@@ -230,7 +229,8 @@ function runRoast() {
   console.log(`  | DIAGNOSIS:                                    |`);
   console.log(`  | ${C.cyan}${C.bold}${padRight(diagnosis, 45)}${C.reset} |`);
   console.log(`${C.yellow}${C.bold}  =================================================${C.reset}`);
-  console.log('  Estimated waste is in tokens. For usage and model-based estimates, run stingy usage.');
+  console.log(`  Fix-like prompts (keyword signal only): ${s.rageMessages}. Excluded from waste totals.`);
+  console.log('  Tool waste uses estimated token counts. For usage and model-based estimates, run stingy usage.');
 
   const receiptData = {
     filesCount: sessionList.length,
@@ -243,7 +243,6 @@ function runRoast() {
     commandRetries: s.commandRetries,
     retryWastedTokens: s.retryWastedTokens,
     rageMessages: s.rageMessages,
-    rageWastedTokens: s.rageWastedTokens,
     surgicalReads: s.surgicalReads,
     grepCalls: s.grepCalls,
     avgTurnCoins: s.avgTurnCoins,

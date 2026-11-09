@@ -191,7 +191,7 @@ export function scoreToolAction(action) {
 /**
  * Evaluate a single user turn (all tool actions executed for one user prompt) against the 10-Coin Budget.
  */
-export function evaluateTurnBudget(actions = []) {
+export function evaluateTurnBudget(actions = [], { includeBreakdown = true } = {}) {
   let totalCoins = 0;
   let bankrupt = false;
   const breakdown = [];
@@ -202,7 +202,7 @@ export function evaluateTurnBudget(actions = []) {
     if (scored.bankrupt || totalCoins > COIN_TABLE.TURN_BUDGET) {
       bankrupt = true;
     }
-    breakdown.push({ ...act, ...scored });
+    if (includeBreakdown) breakdown.push({ ...act, ...scored });
   }
 
   return {
@@ -388,16 +388,15 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = null) {
 
     const toolResultsMap = collectToolResultsMap(records);
 
-    // Session-scoped state
-    const uneditedReadPaths = new Set();
-    let lastCommandFailed = false;
-    let lastFailedCommandSig = null;
-    let currentTurnActions = [];
+    // Workers have separate context and retry histories, even within one user turn.
+    const workers = new Map();
 
     function flushCurrentTurn() {
-      if (currentTurnActions.length > 0) {
-        turnScores.push(evaluateTurnBudget(currentTurnActions));
-        currentTurnActions = [];
+      for (const worker of workers.values()) {
+        if (worker.actions.length > 0) {
+          turnScores.push(evaluateTurnBudget(worker.actions, { includeBreakdown: false }));
+          worker.actions = [];
+        }
       }
     }
 
@@ -411,7 +410,9 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = null) {
         telemetryCacheReadTokens += Number(usage.cache_read_input_tokens || 0);
       }
 
-      if (isHumanPromptRecord(step)) {
+      const agent = step.agentId ?? step.agent_id;
+      const workerId = typeof agent === 'string' && agent ? agent : null;
+      if (!step.isSidechain && isHumanPromptRecord(step)) {
         flushCurrentTurn();
 
         const textContent =
@@ -434,13 +435,18 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = null) {
         ) {
           rageMessages++;
           const rageTok = Math.max(400, estimateTokensFromChars(textContent.length) * 4);
-          baselineToolTokens += rageTok;
           rageWastedTokens += rageTok;
         }
       }
 
       const toolCalls = extractNormalizedToolCalls(step);
       if (toolCalls.length === 0) continue;
+
+      if (!workers.has(workerId)) {
+        workers.set(workerId, { actions: [], uneditedReadPaths: new Set(), lastFailedCommandSig: null });
+      }
+      const worker = workers.get(workerId);
+      const { actions: currentTurnActions, uneditedReadPaths } = worker;
 
       for (const tc of toolCalls) {
         const { id, name, args, inlineResult } = tc;
@@ -555,11 +561,10 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = null) {
         ) {
           editCalls++;
           const editedPaths = Array.isArray(args.paths) ? args.paths : [targetPath];
-          for (const editedPath of editedPaths) {
-            if (typeof editedPath === 'string') uneditedReadPaths.delete(editedPath);
+          for (const context of workers.values()) {
+            for (const editedPath of editedPaths) context.uneditedReadPaths.delete(editedPath);
+            context.lastFailedCommandSig = null;
           }
-          lastCommandFailed = false;
-          lastFailedCommandSig = null;
           baselineToolTokens += 400;
           currentTurnActions.push({ type: 'edit', path: targetPath });
         } else if (
@@ -585,7 +590,7 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = null) {
           const cmdTok = actualReadTokensFromResult(observedResult, failed ? 2400 : 500);
           baselineToolTokens += cmdTok;
 
-          const isSameFailedCommand = failed && lastCommandFailed && cmdSig === lastFailedCommandSig;
+          const isSameFailedCommand = failed && cmdSig !== null && cmdSig === worker.lastFailedCommandSig;
 
           if (isSameFailedCommand) {
             commandRetries++;
@@ -595,8 +600,7 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = null) {
           } else {
             currentTurnActions.push({ type: 'command', isBlindRetry: false });
           }
-          lastCommandFailed = failed;
-          lastFailedCommandSig = failed ? cmdSig : null;
+          worker.lastFailedCommandSig = failed ? cmdSig : null;
         }
       }
     }
@@ -605,7 +609,7 @@ export function analyzeJsonlLines(input = [], pricePerMillionInput = null) {
   }
 
   const readWastedTokens = fullReadWastedTokens + mediumReadWastedTokens + forbiddenReadWastedTokens;
-  const wastedTokens = readWastedTokens + dupReadWastedTokens + retryWastedTokens + rageWastedTokens;
+  const wastedTokens = readWastedTokens + dupReadWastedTokens + retryWastedTokens;
 
   const totalTokens = baselineToolTokens > 0 ? baselineToolTokens : observedCharTokens;
   const clampedWastedTokens = Math.min(totalTokens, wastedTokens);

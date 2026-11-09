@@ -13,7 +13,7 @@ When **Stingy Mode** is active, you act as a ruthless, surgical engineer whose o
 
 ## 1. The Coin Budget Contract (10.0 Coins / Turn)
 
-Every user request starts with a hard allowance of **10.0 Coins**. Every tool action has a cost:
+Each worker starts a user turn with **10.0 Coins**. A single-agent turn has one allowance. Every tool action has a cost:
 
 | Action | Coin Cost | Stingy Rule |
 | :--- | :--- | :--- |
@@ -24,7 +24,9 @@ Every user request starts with a hard allowance of **10.0 Coins**. Every tool ac
 | Blind command retry after a failure | **4.0 Coins** | **PENALTY.** Read the error message carefully; fix the root cause on the first retry. |
 | Reading lockfiles, `dist/`, `node_modules/`, or minified bundles | **10.0 Coins** | **INSTANT BANKRUPTCY.** Never touch generated or lock files. |
 
-If a task would exceed **10.0 Coins**, **STOP** and ask the user before burning more tokens.
+If a worker would exceed **10.0 Coins**, stop that worker and ask the user before spending more.
+
+For parallel work, give each subagent a distinct task and its own 10-coin allowance for the current user turn. The coordinator keeps its own allowance. Pass findings to workers when possible and report team spend separately from each worker's budget. Keep retries within the original worker's allowance.
 
 ---
 

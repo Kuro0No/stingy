@@ -178,6 +178,8 @@ npm run benchmark
 npm test
 ```
 
+The 10,000-step stress test verifies the results and reports elapsed time. Set `STINGY_CHECK_PERFORMANCE=1` to enforce the 500 ms threshold on a performance runner.
+
 ### Methodology & Scope ([`benchmarks/run-benchmark.mjs`](./benchmarks/run-benchmark.mjs))
 * **What this models:** A deterministic, trace-driven comparison of **Unconstrained Baseline Tool Traces** (reading full files without range bounds, duplicate re-reads, un-piped test logs) vs. **Stingy Mode (`scrooge`) Tool Traces** (`grep` + 60–70 line surgical reads + `--silent` test runs) on identical generated TypeScript fixtures (`1,240` to `2,860` lines).
 * **Fixed System Overhead Included:** Every turn includes an uncompressible **8,200-token** base system/schema prefix.
@@ -227,7 +229,8 @@ The prompt skill ([`skills/stingy/SKILL.md`](./skills/stingy/SKILL.md)) instruct
 Discovery respects `CLAUDE_CONFIG_DIR`, `ANTIGRAVITY_DATA_DIR`, `CODEX_HOME`, `GEMINI_DATA_DIR`, `PI_AGENT_DIR`, `OPENCLAW_DIR`, and `COPILOT_HOME`. Pass a file to inspect a saved transcript, including a `codex exec --json` export. Stingy uses Codex command metadata to identify reads and searches where available. It scores other shell calls as commands.
 
 * **Per-Session Isolation:** Duplicate file re-read tracking (`uneditedReadPaths`) is strictly scoped per session file — reading `config.ts` once in two separate sessions is never flagged as a duplicate read.
-* **User turns and waste.** All assistant tool calls between human prompts belong to one turn. Fifteen bounded reads cost 15 coins and go over budget while recording zero estimated waste from those reads.
+* **Worker turns.** Within a user turn, Roast budgets each worker separately when records carry an `agentId` or `agent_id`. Separate transcript files already have independent budgets. Unidentified calls in one transcript share a budget. Fifteen bounded reads by one worker cost 15 coins while recording zero estimated waste from those reads.
+* **Tool waste and prompt signals.** Roast estimates tool waste from reads, re-reads, and failed retries using recorded result sizes or fallback estimates. Fix-like phrases are a keyword signal and stay outside the token total, percentage, and diagnosis.
 * **Dynamic `tool_result` Sizing:** When `tool_result` payloads are present in the transcript, `stingy roast` measures their actual line count and character length (a 1-line file read without `offset`/`limit` is recognized as a small file with `0` waste; a 2,000-line read scales waste proportionally to its actual size, falling back to heuristics only when payloads are omitted).
 * **Empty Logs:** An empty scan exits cleanly. A log containing only surgical reads reports **0 estimated wasted tokens**.
 
@@ -242,7 +245,7 @@ node ./bin/stingy.mjs roast ./benchmarks/fixtures/sample-session.jsonl
 
 ### Local Roast snapshot
 
-On November 6, 2026, Roast estimated the following tool-context waste on local transcripts. Each agent has its own set of sessions.
+On November 6, 2026, Roast produced this historical snapshot. Those totals used the earlier methodology that included a fix-prompt heuristic. Each agent has its own set of sessions.
 
 | Agent | Logs | Estimated tool-context tokens | Estimated wasted tokens |
 | :--- | ---: | ---: | ---: |

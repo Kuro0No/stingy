@@ -5,7 +5,7 @@ description: Audits local coding agent tool transcripts for avoidable token wast
 
 # Stingy Roast (`/stingy-roast`)
 
-`roast` estimates waste in tokens and scores the coin budget for Claude Code, Antigravity JSONL, Codex, Gemini CLI, pi-agent, OpenClaw JSONL, and GitHub Copilot CLI. Use `usage` for recorded token counts and ccusage cost estimates when available.
+`roast` estimates tool waste and scores 10-coin worker turns for Claude Code, Antigravity JSONL, Codex, Gemini CLI, pi-agent, OpenClaw JSONL, and GitHub Copilot CLI. Treat fix-like prompts as a keyword signal separate from waste. Use `usage` for recorded token counts and ccusage cost estimates when available.
 
 ## How to Execute
 

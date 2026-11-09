@@ -614,19 +614,19 @@
               <strong id="rc-retries">1x (2,400 tokens)</strong>
             </div>
             <div class="receipt-row">
-              <span>Rage Prompts ("wrong / fix it")</span>
-              <strong id="rc-rage">1x (400 tokens)</strong>
+              <span>Fix-like prompts (keyword signal)</span>
+              <strong id="rc-rage">1x (excluded)</strong>
             </div>
 
             <div class="receipt-divider"></div>
 
             <div class="receipt-total receipt-total--burned">
               <span>EST. WASTED TOKENS</span>
-              <span id="rc-waste">9,200</span>
+              <span id="rc-waste">8,800</span>
             </div>
 
             <div class="receipt-badge">
-              Run <code>stingy roast</code> for your session's 10-coin score.
+              Run <code>stingy roast</code> for your session's per-worker coin score.
             </div>
 
             <div style="margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap;">
@@ -903,7 +903,7 @@
                 <tr><th scope="row">Codex</th><td>14</td><td>431,757 (1.7%)</td></tr>
               </tbody>
             </table>
-            <p class="cost-note">Each row audits a different set of local transcripts. These are estimates of avoidable tool context from Roast.</p>
+            <p class="cost-note">Each row audits a different set of local transcripts. This historical snapshot used the earlier fix-prompt heuristic in its estimates.</p>
           </div>
         </div>
       </div>
@@ -936,7 +936,7 @@
       ['reads', 'Full-File Reads'],
       ['duplicates', 'Duplicate File Re-Reads'],
       ['retries', 'Blind Retry Loops'],
-      ['rage', 'Frustration / Fix Prompts']
+      ['rage', 'Fix-like prompts (signal)']
     ];
 
     const copyReceiptBtn = document.getElementById('copy-receipt-btn');
@@ -978,7 +978,7 @@
   <text x="496" y="180" fill="#D9381E" font-family="monospace" font-size="14" font-weight="700" text-anchor="end">${dups}</text>
   <text x="48" y="216" fill="#111110" font-family="monospace" font-size="14">Blind Command Retry Loops</text>
   <text x="496" y="216" fill="#D9381E" font-family="monospace" font-size="14" font-weight="700" text-anchor="end">${retries}</text>
-  <text x="48" y="252" fill="#111110" font-family="monospace" font-size="14">Rage Prompts ("wrong / fix it")</text>
+  <text x="48" y="252" fill="#111110" font-family="monospace" font-size="14">Fix-like prompts (keyword signal)</text>
   <text x="496" y="252" fill="#D9381E" font-family="monospace" font-size="14" font-weight="700" text-anchor="end">${rage}</text>
   <line x1="44" y1="278" x2="500" y2="278" stroke="#111110" stroke-width="1.5" stroke-dasharray="6,4"/>
   <text x="48" y="314" fill="#D9381E" font-family="monospace" font-size="16" font-weight="800">EST. WASTED TOKENS</text>

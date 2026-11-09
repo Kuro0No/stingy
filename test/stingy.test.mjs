@@ -83,6 +83,59 @@ test('Coin Table: duplicate re-read costs 5.0 coins', () => {
   assert.equal(res.category, 'DUPLICATE_REREAD');
 });
 
+test('parallel workers get separate budgets and context histories within a turn', () => {
+  const read = (agentId, filePath) => ({
+    agentId, tool_calls: [{ name: 'Read', input: { file_path: filePath } }]
+  });
+  const failed = (agent_id) => ({
+    agent_id, status: 'ERROR', tool_calls: [{ name: 'Bash', input: { command: 'npm test' } }]
+  });
+  const stats = analyzeJsonlLines([
+    { type: 'user', content: 'Review both components' },
+    read('a', 'a.js'),
+    { type: 'user', isSidechain: true, agentId: 'b', content: 'Fix it in the second component' },
+    read('b', 'a.js'),
+    read('a', 'b.js'),
+    read('b', 'c.js'),
+    failed('a'),
+    failed('b')
+  ].map((row) => JSON.stringify(row)));
+  assert.equal(stats.totalTurnsScored, 2);
+  assert.equal(stats.avgTurnCoins, 8.5);
+  assert.equal(stats.bankruptTurns, 0);
+  assert.equal(stats.duplicateReads, 0);
+  assert.equal(stats.commandRetries, 0);
+  assert.equal(stats.rageMessages, 0);
+});
+
+test('parallel QA preserves real retries, invalidates shared reads after edits, and resets budgets on the next turn', () => {
+  const call = (agentId, name, input, status) => ({
+    agentId, status, tool_calls: [{ name, input }]
+  });
+  const read = (agent, file_path) => call(agent, 'Read', { file_path });
+  const edit = () => call('b', 'Edit', { file_path: 'shared.js' });
+  const fail = (agent) => call(agent, 'Bash', { command: 'npm test' }, 'ERROR');
+  const stats = analyzeJsonlLines([
+    { type: 'user', content: 'Review both components' },
+    read('a', 'shared.js'),
+    read('b', 'shared.js'),
+    edit(),
+    read('a', 'shared.js'),
+    fail('a'),
+    fail('b'),
+    fail('a'),
+    edit(),
+    fail('a'),
+    { type: 'user', content: 'Review one more component' },
+    read('a', 'other.js')
+  ].map((row) => JSON.stringify(row)));
+  assert.equal(stats.fullFileReads, 4);
+  assert.equal(stats.duplicateReads, 0);
+  assert.equal(stats.commandRetries, 1);
+  assert.equal(stats.totalTurnsScored, 3);
+  assert.equal(stats.bankruptTurns, 1);
+});
+
 test('Coin Table: reading lockfiles or node_modules triggers instant 10-coin bankruptcy', () => {
   assert.equal(isForbiddenPath('package-lock.json'), true);
   assert.equal(isForbiddenPath('node_modules/react/index.js'), true);
@@ -537,8 +590,9 @@ test('Roast receipt reports whole token estimates whose line items add to total 
   assert.match(stdout, /Full-File Reads[^\n]*\b2,800\b/);
   assert.match(stdout, /Duplicate File Re-Reads[^\n]*\b3,600\b/);
   assert.match(stdout, /Consecutive Cmd Retries[^\n]*\b2,400\b/);
-  assert.match(stdout, /Frustration[^\n]*\b400\b/);
-  assert.match(stdout, /AVOIDABLE WASTED TOKENS[^\n]*\b9,200\b/);
+  assert.match(stdout, /Fix-like prompts[^\n]*: 1\. Excluded from waste totals/);
+  assert.match(stdout, /EST\. TOOL CONTEXT TOKENS[^\n]*\b14,290\b/);
+  assert.match(stdout, /AVOIDABLE WASTED TOKENS[^\n]*\b8,800 \(61\.6%\)/);
   assert.doesNotMatch(stdout, /\$/);
 });
 

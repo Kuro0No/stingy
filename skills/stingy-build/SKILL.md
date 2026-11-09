@@ -9,6 +9,8 @@ When **`/stingy-build`** is active, build or refactor features under a **12.0-Co
 
 ## Core Rules
 
+For independent tasks running in parallel, give each worker its own 12-coin allowance and pass along relevant findings. The coordinator keeps its own allowance. Add their spend when reporting the team's total.
+
 1. **Locate in One Shot (`0.5 Coins`):** Combine symbol lookups across files into a single `grep` / `ripgrep` / `Select-String` call with line numbers (`-n`) before reading existing files >150 lines.
 2. **Surgical Reads Only (`1.0 Coin`):** Always pass `StartLine` and `EndLine` (`offset`/`limit`, max 120 lines) to `read_file`. Never read whole files >250 lines (`4.0 Coins`).
 3. **No Shell Read Bypass (`4.0 Coins Penalty`):** Never use `cat`, `Get-Content`, `head`, or `tail` in shell commands to read source files instead of bounded `read_file`.
