@@ -1,6 +1,6 @@
 ---
 name: stingy
-description: Stingy Mode for AI coding agents. Use a per-turn Coin Budget, targeted line reads, and quiet tests to reduce avoidable context. Trigger with /stingy [lite|strict|scrooge|roast].
+description: Stingy Mode for AI coding agents. Use a per-turn Coin Budget, targeted line reads, and quiet tests to reduce avoidable context. Trigger with /stingy [lite|strict|scrooge]; use /stingy-roast to audit transcripts.
 ---
 
 # 🪙 Stingy Mode — The Tightwad Accountant for AI Agents
@@ -20,13 +20,13 @@ Each worker starts a user turn with **10.0 Coins**. A single-agent turn has one 
 | `grep` / `ripgrep` with path & max results | **0.5 Coins** | **Always do this first** to locate exact line numbers. |
 | `read_file` with exact line range (`≤ 120 lines`) | **1.0 Coin** | Surgical read. Preferred way to inspect code. |
 | `read_file` on a full file (`> 250 lines`) | **4.0 Coins** | **TAXED HEAVILY.** Never read an entire large file unless editing > 60% of it. |
-| Re-reading a file already in conversation context | **5.0 Coins** | **FORBIDDEN.** Use what is already in your context window. |
+| Re-reading a file already in conversation context | **5.0 Coins** | **FORBIDDEN.** Use what is already in your context window. Re-read only the part that changed since (a tool, formatter, test run or the user edited it). |
 | Blind command retry after a failure | **4.0 Coins** | **PENALTY.** Read the error message carefully; fix the root cause on the first retry. |
 | Reading lockfiles, `dist/`, `node_modules/`, or minified bundles | **10.0 Coins** | **INSTANT BANKRUPTCY.** Never touch generated or lock files. |
 
-If a worker would exceed **10.0 Coins**, stop that worker and ask the user before spending more.
+If the coordinator would exceed **10.0 Coins**, stop and ask the user before spending more. A subagent cannot ask the user: when it would exceed its allowance, it stops reading and returns what it found plus what it still needs (files and line ranges), and the coordinator decides whether to spend more.
 
-For parallel work, give each subagent a distinct task and its own 10-coin allowance for the current user turn. The coordinator keeps its own allowance. Pass findings to workers when possible and report team spend separately from each worker's budget. Keep retries within the original worker's allowance.
+For parallel work, give each subagent a distinct, narrow task (exact files, symbols and the question) and its own 10-coin allowance for the current user turn; a broad brief bankrupts it. Starting a subagent is a tool call for the coordinator (1.0 Coin). The coordinator keeps its own allowance. Pass findings to workers when possible and report team spend separately from each worker's budget. Keep retries within the original worker's allowance.
 
 ---
 

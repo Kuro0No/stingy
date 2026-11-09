@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
   COIN_TABLE,
@@ -329,7 +329,13 @@ test('stingy init installs Stingy and Stingy Build while preserving existing leg
     for (const agentDir of ['.claude', '.agents']) {
       for (const name of ['stingy', 'stingy-build']) {
         const file = path.join('skills', name, 'SKILL.md');
-        assert.deepEqual(fs.readFileSync(path.join(tempWorkspace, agentDir, file)), fs.readFileSync(path.join(REPO_ROOT, file)));
+        const source = fs.readFileSync(path.join(REPO_ROOT, file), 'utf8');
+        // --mode scrooge becomes the default mode of the installed /stingy skill.
+        const expected = name === 'stingy'
+          ? source.replace('Default mode is **`strict`**', 'Default mode is **`scrooge`**')
+          : source;
+        if (name === 'stingy') assert.match(expected, /Default mode is \*\*`scrooge`\*\*/);
+        assert.equal(fs.readFileSync(path.join(tempWorkspace, agentDir, file), 'utf8'), expected);
       }
     }
     assert.equal(fs.existsSync(path.join(tempWorkspace, '.claude', 'skills', 'stingy-lite', 'SKILL.md')), false);
@@ -560,10 +566,11 @@ test('Codex Round-4 Regression #3: Literal JSON null or primitive lines in JSONL
 });
 
 test('Claude Round-4 Regression #4: stingy roast on non-existent path reports "Path not found"', () => {
-  const stdout = execFileSync(process.execPath, [CLI_PATH, 'roast', './definitely-missing-file-999.jsonl'], {
+  const res = spawnSync(process.execPath, [CLI_PATH, 'roast', './definitely-missing-file-999.jsonl'], {
     encoding: 'utf8'
   });
-  assert.match(stdout, /Path not found/i);
+  assert.equal(res.status, 1);
+  assert.match(res.stderr, /Path not found/i);
 });
 
 test('Codex Round-5 Regression #1: Command argument case sensitivity is preserved (grep Foo vs grep foo is NOT a retry)', () => {

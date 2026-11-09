@@ -22,7 +22,7 @@ The [API cost calculator](https://kuro0no.github.io/stingy/#roast-generator) app
 
 <p align="center">
   <a href="#license"><img src="https://img.shields.io/badge/License-MIT-black.svg" alt="License: MIT" /></a>
-  <a href="./test/"><img src="https://img.shields.io/badge/tests-36%20passing-brightgreen.svg" alt="Tests: 36 passing" /></a>
+  <a href="./test/"><img src="https://img.shields.io/badge/tests-55%20passing-brightgreen.svg" alt="Tests: 55 passing" /></a>
   <a href="https://kuro0no.github.io/stingy/"><img src="https://img.shields.io/badge/demo-kuro0no.github.io%2Fstingy-orange.svg" alt="Live Demo" /></a>
 </p>
 
@@ -149,7 +149,7 @@ The [Gemini 3.8 Flash Medium traces](./benchmarks/fixtures/MANIFEST.json) record
 | **`/stingy lite`** | **10.0 Coins** | Targeted context gathering | Search first, read up to 120 lines, and batch independent tool calls. Receipt on request. |
 | **`/stingy`** (or `/stingy strict`) | **10.0 Coins** | Daily coding, debugging, PR reviews | Inherits the general lite rules, limits exploratory reads, and adds a coin receipt. |
 | **`/stingy scrooge`** | **10.0 Coins** | Focused bug hunts | Inherits strict rules, avoids speculative calls, plans the patch before editing, and uses a Scrooge receipt. |
-| **`/stingy-roast`** (or `/stingy roast`) | **Audit Mode** | **In-chat session token autopsy** | Runs the offline transcript analyzer and prints your ASCII Token Autopsy Receipt + Archetype diagnosis inside chat. |
+| **`/stingy-roast`** | **Audit Mode** | **In-chat session token autopsy** | Runs the offline transcript analyzer and prints your ASCII Token Autopsy Receipt + Archetype diagnosis inside chat. |
 
 ### 2. Terminal CLI Commands (`npx github:Kuro0No/stingy <cmd>`)
 
@@ -159,9 +159,9 @@ The [Gemini 3.8 Flash Medium traces](./benchmarks/fixtures/MANIFEST.json) record
 | `npx github:Kuro0No/stingy roast --svg [out.svg] --png [out.png]` | Exports your Token Autopsy Receipt as a shareable vector `.svg` card and/or lossless `.png` image (zero dependencies). |
 | `npx github:Kuro0No/stingy roast --source <agent>` | Filters `roast` by agent (`claude`, `antigravity`, `codex`, `gemini`, `copilot`, `pi`, `openclaw`). |
 | `npx github:Kuro0No/stingy usage [source]` | Summarizes logged input/output/cache token bills across 18 agent sources via `ccusage`. |
-| `npx github:Kuro0No/stingy init [--hook] [--mode lite\|strict\|scrooge]` | Installs `stingy` and `stingy-build` under `.claude/skills/` and `.agents/skills/`. Pass `--hook` to also install the hard-enforcement `PreToolUse` hook into `.claude/settings.json`. |
-| `npx github:Kuro0No/stingy hook` | Evaluates a `PreToolUse` JSON event on `stdin` and blocks unbounded full-file reads (`> 250 lines`) or lockfiles before they enter context. |
-| `npx github:Kuro0No/stingy audit [dir]` | Scans a repository for oversized "Token Black Hole" files (`> 12 KB`). |
+| `npx github:Kuro0No/stingy init [--hook] [--mode lite\|strict\|scrooge]` | Installs `stingy` and `stingy-build` under `.claude/skills/` and `.agents/skills/`; `--mode` (default `strict`) becomes the installed skill's default mode. Pass `--hook` to also install the hard-enforcement `PreToolUse` hook into `.claude/settings.json` (existing settings are kept; an invalid settings file stops the install unchanged). |
+| `npx github:Kuro0No/stingy hook` | Evaluates a `PreToolUse` JSON event on `stdin` and blocks unbounded full-file reads (`> 250 lines`), `cat`/`Get-Content` dumps of such files, or lockfiles before they enter context. Allowed calls print nothing, so your normal permission prompts still apply. |
+| `npx github:Kuro0No/stingy audit [dir]` | Scans a repository for oversized "Token Black Hole" text files (`> 12 KB`); respects `.gitignore` and skips binary files. |
 
 ---
 

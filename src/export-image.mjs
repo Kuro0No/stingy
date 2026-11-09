@@ -286,8 +286,11 @@ export function renderReceiptPng(data) {
 
   // Diagnosis Banner
   fillRect(40, 472, width - 88, 38, 20, 20, 19);
-  const shortDiag = String(data.diagnosis || 'CERTIFIED SCROOGE').slice(0, 36);
-  drawText(shortDiag, 54, 484, 250, 249, 245, 2);
+  // The banner fits 36 characters per line: split "NAME (detail)" over two lines instead of cutting it.
+  const diag = String(data.diagnosis || 'CERTIFIED SCROOGE');
+  const cut = diag.indexOf(' (');
+  const diagLines = diag.length > 36 && cut > 0 ? [diag.slice(0, cut), diag.slice(cut + 1)] : [diag];
+  diagLines.forEach((line, i) => drawText(line, 54, diagLines.length > 1 ? 476 + i * 18 : 484, 250, 249, 245, 2));
 
   // Encode PNG chunks
   const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);

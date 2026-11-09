@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { StringDecoder } from 'node:string_decoder';
 
 export const ROAST_SOURCES = Object.freeze([
   'claude', 'antigravity', 'codex', 'gemini', 'pi', 'openclaw', 'copilot'
@@ -308,12 +309,37 @@ function detectSource(entries) {
   return null;
 }
 
+/**
+ * Non-empty lines of a JSONL file, read in 8 MB chunks: a transcript over ~512 MB cannot be held
+ * in one JavaScript string, and reading it whole made roast skip the biggest sessions silently.
+ */
+export function readLinesSync(filePath, chunkSize = 8 * 1024 * 1024) {
+  const fd = fs.openSync(filePath, 'r');
+  const decoder = new StringDecoder('utf8');
+  const buf = Buffer.alloc(chunkSize);
+  const lines = [];
+  let rest = '';
+  try {
+    for (let n; (n = fs.readSync(fd, buf, 0, buf.length, null)) > 0; ) {
+      const parts = (rest + decoder.write(buf.subarray(0, n))).split(/\r?\n/);
+      rest = parts.pop();
+      for (const line of parts) if (line.trim()) lines.push(line);
+    }
+    rest += decoder.end();
+    if (rest.trim()) lines.push(rest);
+  } finally {
+    fs.closeSync(fd);
+  }
+  if (lines.length > 0) lines[0] = lines[0].replace(/^\uFEFF/, '');
+  return lines;
+}
+
 export function readTranscript(file) {
-  const raw = fs.readFileSync(file.path, 'utf8').replace(/^\uFEFF/, '');
-  const lines = raw.split(/\r?\n/).filter((line) => line.trim());
+  const isJson = /\.json$/i.test(file.path);
+  const raw = isJson ? fs.readFileSync(file.path, 'utf8').replace(/^\uFEFF/, '') : null;
+  const lines = isJson ? raw.split(/\r?\n/).filter((line) => line.trim()) : readLinesSync(file.path);
   if (file.source === 'claude' || file.source === 'antigravity') return lines;
 
-  const isJson = /\.json$/i.test(file.path);
   const entries = (isJson ? [raw] : lines).map(parseObject).filter(Boolean);
   const source = file.source ?? detectSource(entries);
   const adapt = adapters.get(source);

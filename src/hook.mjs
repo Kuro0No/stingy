@@ -170,17 +170,11 @@ export function evaluatePreToolHook(event = {}, options = {}) {
 
 /**
  * Format the evaluation result as a Claude Code / Universal PreToolUse JSON response.
+ * Allowed calls return null: the hook prints nothing, so the normal permission prompts still apply.
+ * (`permissionDecision: "allow"` would auto-approve every Bash command the hook does not block.)
  */
 export function formatHookResponse(evalResult) {
-  if (evalResult.allowed) {
-    return {
-      decision: 'allow',
-      hookSpecificOutput: {
-        hookEventName: 'PreToolUse',
-        permissionDecision: 'allow'
-      }
-    };
-  }
+  if (evalResult.allowed) return null;
   return {
     decision: 'block',
     reason: evalResult.reason,
@@ -199,8 +193,22 @@ export function formatHookResponse(evalResult) {
 export function installPreToolHook(workspaceRoot = process.cwd(), maxLines = DEFAULT_MAX_FULL_READ_LINES) {
   const claudeDir = path.join(workspaceRoot, '.claude');
   const hooksDir = path.join(claudeDir, 'hooks');
-  fs.mkdirSync(hooksDir, { recursive: true });
 
+  // Read settings first: an unparsable file is reported and left untouched, never replaced.
+  const settingsPath = path.join(claudeDir, 'settings.json');
+  let settings = {};
+  if (fs.existsSync(settingsPath)) {
+    try {
+      settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    } catch (error) {
+      throw new Error(`Cannot parse ${settingsPath} (${error.message}). Fix the JSON and run init --hook again; nothing was changed.`);
+    }
+    if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+      throw new Error(`${settingsPath} is not a JSON object; nothing was changed.`);
+    }
+  }
+
+  fs.mkdirSync(hooksDir, { recursive: true });
   const hookScriptPath = path.join(hooksDir, 'stingy-pre-tool.mjs');
   const standaloneScript = `#!/usr/bin/env node
 // 🪙 Stingy PreToolUse Hook — Hard-blocks unbounded full-file reads (> ${maxLines} lines) & lockfiles
@@ -276,6 +284,20 @@ function block(reason) {
   process.exit(0);
 }
 
+function lineCount(target) {
+  const resolved = path.isAbsolute(target) ? target : path.resolve(cwd, target);
+  try {
+    const content = fs.readFileSync(resolved, 'utf8');
+    return content.length === 0 ? 0 : content.split(/\\r?\\n/).length;
+  } catch {
+    return null; // file doesn't exist yet -> allow
+  }
+}
+
+${stripOuterQuotes.toString()}
+
+${extractUnboundedShellReadTarget.toString()}
+
 if (/^(Read|read_file|view_file|mcp_read_file)$/i.test(toolName)) {
   const target = String(input.file_path || input.Path || input.AbsolutePath || input.path || '').trim().replace(/^["']+|["']+$/g, '');
   if (target && isForbidden(target)) {
@@ -288,32 +310,26 @@ if (/^(Read|read_file|view_file|mcp_read_file)$/i.test(toolName)) {
     }
     process.exit(0);
   }
-  if (target) {
-    const resolved = path.isAbsolute(target) ? target : path.resolve(cwd, target);
-    try {
-      const content = fs.readFileSync(resolved, 'utf8');
-      const lines = content.length === 0 ? 0 : content.split(/\\r?\\n/).length;
-      if (lines > MAX_LINES) {
-        block(\`🪙 [STINGY PRE-TOOL HOOK BLOCKED]: "\${path.basename(target)}" has \${lines} lines (> \${MAX_LINES}-line full-read cap). Use Grep first (0.5 Coins), then Read with offset & limit <= 120 lines (1.0 Coin).\`);
-      }
-    } catch {
-      // File doesn't exist yet -> allow
-    }
+  const lines = target ? lineCount(target) : null;
+  if (lines !== null && lines > MAX_LINES) {
+    block(\`🪙 [STINGY PRE-TOOL HOOK BLOCKED]: "\${path.basename(target)}" has \${lines} lines (> \${MAX_LINES}-line full-read cap). Use Grep first (0.5 Coins), then Read with offset & limit <= 120 lines (1.0 Coin).\`);
   }
 }
+
+if (/^(Bash|run_command|exec_command|shell)$/i.test(toolName)) {
+  const target = extractUnboundedShellReadTarget(input.command || input.CommandLine || input.cmd || '');
+  if (target && isForbidden(target)) {
+    block(\`🪙 [STINGY PRE-TOOL HOOK BLOCKED]: Dumping forbidden path "\${path.basename(target)}" via shell costs 10.0 Coins.\`);
+  }
+  const lines = target ? lineCount(target) : null;
+  if (lines !== null && lines > MAX_LINES) {
+    block(\`🪙 [STINGY PRE-TOOL HOOK BLOCKED]: Unbounded shell dump of "\${path.basename(target)}" (\${lines} lines). Use Grep + a bounded Read (<= 120 lines) instead.\`);
+  }
+}
+// Anything else: print nothing, so Claude Code's normal permission checks still apply.
 `;
 
   fs.writeFileSync(hookScriptPath, standaloneScript, 'utf8');
-
-  const settingsPath = path.join(claudeDir, 'settings.json');
-  let settings = {};
-  if (fs.existsSync(settingsPath)) {
-    try {
-      settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-    } catch {
-      settings = {};
-    }
-  }
 
   if (!settings.hooks || typeof settings.hooks !== 'object') {
     settings.hooks = {};
@@ -322,12 +338,17 @@ if (/^(Read|read_file|view_file|mcp_read_file)$/i.test(toolName)) {
     settings.hooks.PreToolUse = [];
   }
 
-  const hookCommand = 'node .claude/hooks/stingy-pre-tool.mjs';
-  const alreadyInstalled = settings.hooks.PreToolUse.some(
-    (entry) =>
-      Array.isArray(entry?.hooks) &&
-      entry.hooks.some((h) => typeof h?.command === 'string' && h.command.includes('stingy-pre-tool.mjs'))
-  );
+  // Absolute via $CLAUDE_PROJECT_DIR: a relative path breaks when the session's cwd is not the project root.
+  const hookCommand = 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/stingy-pre-tool.mjs"';
+  let alreadyInstalled = false;
+  for (const entry of settings.hooks.PreToolUse) {
+    for (const h of Array.isArray(entry?.hooks) ? entry.hooks : []) {
+      if (typeof h?.command === 'string' && h.command.includes('stingy-pre-tool.mjs')) {
+        h.command = hookCommand; // upgrades the old relative command
+        alreadyInstalled = true;
+      }
+    }
+  }
 
   if (!alreadyInstalled) {
     settings.hooks.PreToolUse.push({

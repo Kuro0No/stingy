@@ -1,7 +1,7 @@
 {
   "name": "stingy",
   "displayName": "Stingy",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A 10-coin tool budget for AI coding agents and an offline receipt for avoidable context waste.",
   "logo": "assets/logo.svg",
   "suggestedPrompts": [

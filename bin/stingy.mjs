@@ -5,14 +5,15 @@
  * Commands:
  *   stingy roast [path]    -> Audit local JSONL transcripts & print a Token Autopsy Receipt
  *   stingy usage [agent]   -> Summarize agent tokens and estimated cost via ccusage
- *   stingy audit [dir]     -> Find high-token files ("Token Black Holes") & generate .claudeignore
+ *   stingy audit [dir]     -> Find high-token text files ("Token Black Holes")
  *   stingy init [--mode]   -> Install /stingy and /stingy-build project skills
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { analyzeJsonlLines } from '../src/core.mjs';
+import { analyzeJsonlLines, isForbiddenPath } from '../src/core.mjs';
 import { findLocalLogs, readTranscript, ROAST_SOURCES } from '../src/transcripts.mjs';
 import { readUsageReport, USAGE_SOURCES } from '../src/usage.mjs';
 import { evaluatePreToolHook, formatHookResponse, installPreToolHook } from '../src/hook.mjs';
@@ -20,28 +21,33 @@ import { renderReceiptSvg, renderReceiptPng } from '../src/export-image.mjs';
 
 export { findLocalLogs };
 
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const MODES = ['lite', 'strict', 'scrooge'];
+
+// No escape codes when output goes to a file or pipe, or when NO_COLOR is set.
+const useColor = Boolean(process.stdout.isTTY) && !process.env.NO_COLOR;
+const paint = (code) => (useColor ? code : '');
 const C = {
-  reset: '\x1b[0m',
-  bold: '\x1b[1m',
-  dim: '\x1b[2m',
-  red: '\x1b[31m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  cyan: '\x1b[36m',
-  white: '\x1b[37m'
+  reset: paint('\x1b[0m'),
+  bold: paint('\x1b[1m'),
+  dim: paint('\x1b[2m'),
+  red: paint('\x1b[31m'),
+  green: paint('\x1b[32m'),
+  yellow: paint('\x1b[33m'),
+  cyan: paint('\x1b[36m'),
+  white: paint('\x1b[37m')
 };
 
 const args = process.argv.slice(2);
 const command = (args[0] || 'help').toLowerCase();
 
+// Pad only: a value wider than its column widens the row instead of losing digits.
 function padRight(str, len) {
-  const s = String(str);
-  return s.length >= len ? s.slice(0, len) : s + ' '.repeat(len - s.length);
+  return String(str).padEnd(len);
 }
 
 function padLeft(str, len) {
-  const s = String(str);
-  return s.length >= len ? s.slice(0, len) : ' '.repeat(len - s.length) + s;
+  return String(str).padStart(len);
 }
 
 function reportArguments(allowed) {
@@ -128,13 +134,7 @@ function runRoast() {
     throw new Error(`Transcript sources are ${ROAST_SOURCES.join(', ')}.${usageHint}`);
   }
   if (customPath && !fs.existsSync(path.resolve(process.cwd(), customPath))) {
-    console.log('');
-    console.log(`${C.red}Path not found: ${customPath}${C.reset}`);
-    console.log(
-      `${C.dim}Usage: stingy roast [path] [--source agent]${C.reset}`
-    );
-    console.log('');
-    return;
+    throw new Error(`Path not found: ${customPath}\nUsage: stingy roast [path] [--source agent]`);
   }
 
   const files = findLocalLogs(customPath, source);
@@ -216,7 +216,7 @@ function runRoast() {
     `  | AVG COINS PER WORKER TURN: ${`${s.avgTurnCoins} / 10.0 Coins`.padStart(18)} |`
   );
   console.log(
-    `  | BANKRUPT WORKER TURNS:     ${padLeft(`${s.bankruptTurns} / ${s.totalTurnsScored} turns`, 17)} |`
+    `  | BANKRUPT WORKER TURNS:     ${padLeft(`${s.bankruptTurns} / ${s.totalTurnsScored} turns`, 18)} |`
   );
   console.log(`  |-----------------------------------------------|`);
   console.log(
@@ -278,46 +278,79 @@ function runRoast() {
 /**
  * Audit a workspace directory to find "Token Black Holes"
  */
-function runAudit(targetDir = process.cwd()) {
-  const heavyFiles = [];
-  const ignoreDirs = new Set(['.git', 'node_modules', '.next', 'dist', 'build', 'coverage']);
+const AUDIT_IGNORED_DIRS = new Set([
+  '.git', 'node_modules', '.next', 'dist', 'build', 'coverage', 'vendor', '.venv', 'venv', '__pycache__',
+  'target', '.gradle', 'Pods', '.dart_tool', 'out', '.turbo', '.cache'
+]);
 
-  function scan(dir, depth = 0) {
-    if (depth > 5) return;
-    let entries = [];
-    try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const entry of entries) {
-      if (ignoreDirs.has(entry.name)) continue;
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        scan(full, depth + 1);
-      } else if (entry.isFile()) {
-        try {
-          const stat = fs.statSync(full);
-          if (stat.size > 12 * 1024) {
-            heavyFiles.push({
-              relPath: path.relative(targetDir, full),
-              bytes: stat.size,
-              estTokens: Math.round(stat.size / 4)
-            });
-          }
-        } catch {
-          // ignore
-        }
+/** Files git would track (respects .gitignore); outside a git repo, a full walk that skips generated folders. */
+function listAuditFiles(dir) {
+  try {
+    const out = execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
+      cwd: dir,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      maxBuffer: 512 * 1024 * 1024
+    });
+    return out.split('\0').filter(Boolean).map((f) => path.join(dir, f));
+  } catch {
+    const files = [];
+    (function walk(d) {
+      let entries = [];
+      try {
+        entries = fs.readdirSync(d, { withFileTypes: true });
+      } catch {
+        return;
       }
-    }
+      for (const entry of entries) {
+        if (AUDIT_IGNORED_DIRS.has(entry.name)) continue;
+        const full = path.join(d, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (entry.isFile()) files.push(full);
+      }
+    })(dir);
+    return files;
+  }
+}
+
+/** Same rule as git: a NUL byte in the first 8000 bytes means binary (images, archives, fonts). */
+function isBinaryFile(file) {
+  const fd = fs.openSync(file, 'r');
+  try {
+    const buf = Buffer.alloc(8000);
+    const n = fs.readSync(fd, buf, 0, buf.length, 0);
+    return buf.subarray(0, n).includes(0);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+function runAudit(targetDir = process.cwd()) {
+  const root = path.resolve(targetDir);
+  if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) {
+    throw new Error(`Not a directory: ${targetDir}`);
   }
 
-  scan(targetDir);
+  const heavyFiles = [];
+  for (const full of listAuditFiles(root)) {
+    try {
+      const stat = fs.statSync(full);
+      if (stat.size > 12 * 1024 && !isBinaryFile(full)) {
+        heavyFiles.push({
+          relPath: path.relative(root, full),
+          bytes: stat.size,
+          estTokens: Math.round(stat.size / 4)
+        });
+      }
+    } catch {
+      // deleted or unreadable: skip
+    }
+  }
   heavyFiles.sort((a, b) => b.estTokens - a.estTokens);
   const top = heavyFiles.slice(0, 10);
 
   console.log(
-    `\n${C.yellow}${C.bold}🪙 STINGY REPO AUDIT — Top Token Black Holes in ${path.basename(targetDir)}${C.reset}\n`
+    `\n${C.yellow}${C.bold}🪙 STINGY REPO AUDIT — Top Token Black Holes in ${path.basename(root)}${C.reset}\n`
   );
 
   if (top.length === 0) {
@@ -330,7 +363,8 @@ function runAudit(targetDir = process.cwd()) {
   console.log(`  ${padRight('FILE PATH', 42)} ${padLeft('EST. TOKENS', 14)}   ${padLeft('COIN COST', 10)}`);
   console.log(`  ${'-'.repeat(70)}`);
   for (const f of top) {
-    const coins = f.estTokens > 10000 ? '10.0 (BAN)' : f.estTokens > 3000 ? '4.0 Coins' : '2.0 Coins';
+    // Same table as the skill: only generated/lock paths are bankrupt; a big source file is a 4-coin full read.
+    const coins = isForbiddenPath(f.relPath) ? '10.0 (BAN)' : f.estTokens > 3000 ? '4.0 Coins' : '2.0 Coins';
     console.log(
       `  ${padRight(f.relPath, 42)} ${C.red}${padLeft(f.estTokens.toLocaleString('en-US') + ' tok', 14)}${C.reset}   ${padLeft(coins, 10)}`
     );
@@ -344,17 +378,17 @@ function runAudit(targetDir = process.cwd()) {
  * Install the bundled project skills into the current workspace.
  */
 function runInit() {
+  const modeArg = args.find((a) => a.startsWith('--mode='));
   const modeIndex = args.indexOf('--mode');
-  const mode = modeIndex !== -1 && args[modeIndex + 1] ? args[modeIndex + 1] : 'scrooge';
+  const mode = (modeArg ? modeArg.slice('--mode='.length) : modeIndex !== -1 ? args[modeIndex + 1] || '' : 'strict').toLowerCase();
+  if (!MODES.includes(mode)) throw new Error(`Unknown mode "${mode}". Use --mode ${MODES.join('|')}.`);
 
-  const skillRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'skills');
-  const generalFile = path.join(skillRoot, 'stingy', 'SKILL.md');
-  const skills = [{
-    name: 'stingy',
-    content: fs.existsSync(generalFile)
-      ? fs.readFileSync(generalFile)
-      : `---\nname: stingy\ndescription: Stingy Mode (${mode}) — Enforce 10-Coin Turn Budget & surgical line-range reads.\n---\n\n# Stingy Mode (${mode.toUpperCase()})\n1. Always grep with line numbers before reading files.\n2. Always supply StartLine/EndLine or offset/limit (max 100 lines) when reading files.\n3. Never re-read a file already in context.\n`
-  }];
+  // The chosen mode becomes the default mode written into the installed /stingy skill.
+  const skillRoot = path.join(REPO_ROOT, 'skills');
+  const general = fs
+    .readFileSync(path.join(skillRoot, 'stingy', 'SKILL.md'), 'utf8')
+    .replace(/Default mode is \*\*`\w+`\*\*/, `Default mode is **\`${mode}\`**`);
+  const skills = [{ name: 'stingy', content: general }];
   const featureSkillName = 'stingy-build';
   const featureFile = path.join(skillRoot, featureSkillName, 'SKILL.md');
   const hasFeatureSkill = fs.existsSync(featureFile);
@@ -396,33 +430,39 @@ function runHook() {
   } catch {
     return;
   }
-  const result = evaluatePreToolHook(event);
-  process.stdout.write(JSON.stringify(formatHookResponse(result)) + '\n');
+  const response = formatHookResponse(evaluatePreToolHook(event));
+  // Print only to block; silence leaves the decision to Claude Code's permission rules.
+  if (response) process.stdout.write(JSON.stringify(response) + '\n');
 }
 
-if (command === 'roast' || command === 'usage') {
-  try {
-    if (command === 'roast') runRoast();
-    else runUsage();
-  } catch (error) {
-    console.error(error.message);
-    process.exitCode = 1;
-  }
-} else if (command === 'audit') {
-  runAudit(args[1] || process.cwd());
-} else if (command === 'init') {
-  runInit();
-} else if (command === 'hook') {
-  runHook();
-} else {
-  console.log(`
+function printHelp(log = console.log) {
+  log(`
 ${C.yellow}${C.bold}🪙 stingy${C.reset} — Roast tool waste and tally local agent usage.
 
 ${C.bold}Usage:${C.reset}
   npx github:Kuro0No/stingy roast [path] [--source agent] [--svg out.svg] [--png out.png]
   npx github:Kuro0No/stingy usage [agent] [--from report.json] [--json]
   npx github:Kuro0No/stingy audit [dir]        ${C.dim}# Scan repo for Token Black Hole files${C.reset}
-  npx github:Kuro0No/stingy init [--hook]      ${C.dim}# Install /stingy skills & optional PreToolUse hook${C.reset}
+  npx github:Kuro0No/stingy init [--mode lite|strict|scrooge] [--hook]   ${C.dim}# Install /stingy skills & optional PreToolUse hook${C.reset}
   npx github:Kuro0No/stingy hook               ${C.dim}# Evaluate PreToolUse JSON event on stdin${C.reset}
+  npx github:Kuro0No/stingy --version
 `);
+}
+
+const commands = { roast: runRoast, usage: runUsage, audit: () => runAudit(args[1] || process.cwd()), init: runInit, hook: runHook };
+try {
+  if (commands[command]) {
+    commands[command]();
+  } else if (['help', '--help', '-h'].includes(command)) {
+    printHelp();
+  } else if (['version', '--version', '-v'].includes(command)) {
+    console.log(JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8')).version);
+  } else {
+    console.error(`Unknown command: ${args[0]}`);
+    printHelp(console.error);
+    process.exitCode = 1;
+  }
+} catch (error) {
+  console.error(error.message);
+  process.exitCode = 1;
 }
