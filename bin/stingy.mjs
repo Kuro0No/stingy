@@ -24,6 +24,65 @@ export { findLocalLogs };
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MODES = ['lite', 'strict', 'scrooge'];
 
+// Where each agent reads instructions. Skill agents get skill folders; the rest get the same rules in a file.
+const SKILL_DIRS = { claude: '.claude', antigravity: '.agents' };
+const RULE_FILES = {
+  codex: { file: 'AGENTS.md', shared: true }, // Codex / ChatGPT agents and other AGENTS.md readers
+  gemini: { file: 'GEMINI.md', shared: true }, // Gemini CLI
+  copilot: { file: path.join('.github', 'copilot-instructions.md'), shared: true },
+  aider: {
+    file: 'CONVENTIONS.md',
+    shared: true,
+    hint: 'Aider: add "read: CONVENTIONS.md" to .aider.conf.yml (or run aider --read CONVENTIONS.md).'
+  },
+  cursor: {
+    file: path.join('.cursor', 'rules', 'stingy.mdc'),
+    wrap: (body) => `---\ndescription: Stingy Mode - fewer round trips, lean context\nalwaysApply: true\n---\n\n${body}`
+  },
+  windsurf: { file: path.join('.windsurf', 'rules', 'stingy.md'), wrap: (body) => `---\ntrigger: always_on\n---\n\n${body}` },
+  cline: { file: path.join('.clinerules', 'stingy.md'), wrap: (body) => body }
+};
+const AGENTS = [...Object.keys(SKILL_DIRS), ...Object.keys(RULE_FILES)];
+const BLOCK_START = '<!-- stingy:start -->';
+const BLOCK_END = '<!-- stingy:end -->';
+
+function agentsFromArgs() {
+  const eq = args.find((a) => a.startsWith('--agent='));
+  const i = args.indexOf('--agent');
+  const raw = (eq ? eq.slice('--agent='.length) : i !== -1 ? args[i + 1] || '' : 'claude,antigravity').toLowerCase();
+  const list = raw === 'all' ? AGENTS : raw.split(',').map((a) => a.trim()).filter(Boolean);
+  const unknown = list.filter((a) => !AGENTS.includes(a));
+  if (list.length === 0 || unknown.length) {
+    throw new Error(`Unknown agent "${unknown.join(', ') || raw}". Use --agent ${AGENTS.join('|')}|all (comma list allowed).`);
+  }
+  return [...new Set(list)];
+}
+
+/** The skill as plain rules for agents without skills, plus a shell fallback for searches and ranged reads. */
+function rulesFor(skill) {
+  const body = skill.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '').trim();
+  const shell = "\n\nNo search or ranged-read tool? Search with `rg -n -C 25 \"<symbol>\" <path>` (or `grep -n -C 25`); read a range with `sed -n '120,200p' <file>`.\n";
+  // Inside a shared file the headings move down one level, under that file's own title.
+  return { own: body + shell, shared: (body + shell).replace(/^(#{1,5}) /gm, '#$1 ') };
+}
+
+function writeFile(file, text) {
+  fs.mkdirSync(path.dirname(path.resolve(file)), { recursive: true });
+  fs.writeFileSync(file, text);
+}
+
+/** Writes the rules between stingy markers and keeps the rest of a shared file (AGENTS.md, GEMINI.md…) as it is. */
+function upsertManagedBlock(file, body) {
+  const block = `${BLOCK_START}\n${body.trim()}\n${BLOCK_END}`;
+  const old = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+  const start = old.indexOf(BLOCK_START);
+  const end = start === -1 ? -1 : old.indexOf(BLOCK_END, start);
+  const next = end !== -1
+    ? old.slice(0, start) + block + old.slice(end + BLOCK_END.length)
+    : `${old.trimEnd()}${old.trim() ? '\n\n' : ''}${block}\n`;
+  writeFile(file, next);
+}
+
 // No escape codes when output goes to a file or pipe, or when NO_COLOR is set.
 const useColor = Boolean(process.stdout.isTTY) && !process.env.NO_COLOR;
 const paint = (code) => (useColor ? code : '');
@@ -396,18 +455,28 @@ function runInit() {
     skills.push({ name: featureSkillName, content: fs.readFileSync(featureFile) });
   }
 
-  console.log(`\n${C.green}${C.bold}🪙 Installing Stingy project skills${C.reset}`);
-  for (const workspaceDir of ['.claude', '.agents']) {
+  const agents = agentsFromArgs();
+  console.log(`\n${C.green}${C.bold}🪙 Installing Stingy for: ${agents.join(', ')}${C.reset}`);
+  for (const agent of agents.filter((a) => SKILL_DIRS[a])) {
     for (const { name, content } of skills) {
-      const dir = path.join(workspaceDir, 'skills', name);
-      const file = path.join(dir, 'SKILL.md');
-      fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(file, content);
+      const file = path.join(SKILL_DIRS[agent], 'skills', name, 'SKILL.md');
+      writeFile(file, content);
       console.log(`  ${C.dim}Installed:${C.reset} ${file}`);
     }
   }
+  // Agents without skills read the same rules from their own instruction file.
+  const rules = rulesFor(general);
+  for (const agent of agents.filter((a) => RULE_FILES[a])) {
+    const { file, shared, wrap, hint } = RULE_FILES[agent];
+    if (shared) upsertManagedBlock(file, rules.shared);
+    else writeFile(file, wrap(rules.own));
+    console.log(`  ${C.dim}${agent}:${C.reset} ${file}${shared ? ' (stingy block; the rest of the file is kept)' : ''}`);
+    if (hint) console.log(`    ${C.dim}${hint}${C.reset}`);
+  }
   console.log(`  ${C.dim}General mode:${C.reset} ${C.yellow}/stingy ${mode}${C.reset}`);
-  if (hasFeatureSkill) console.log(`  ${C.dim}Feature-building mode:${C.reset} ${C.yellow}/${featureSkillName}${C.reset}`);
+  if (hasFeatureSkill && agents.some((a) => SKILL_DIRS[a])) {
+    console.log(`  ${C.dim}Feature-building mode:${C.reset} ${C.yellow}/${featureSkillName}${C.reset}`);
+  }
 
   if (args.includes('--hook')) {
     const { hookScriptPath, settingsPath } = installPreToolHook(process.cwd());
@@ -443,7 +512,8 @@ ${C.bold}Usage:${C.reset}
   npx github:Kuro0No/stingy roast [path] [--source agent] [--svg out.svg] [--png out.png]
   npx github:Kuro0No/stingy usage [agent] [--from report.json] [--json]
   npx github:Kuro0No/stingy audit [dir]        ${C.dim}# Scan repo for Token Black Hole files${C.reset}
-  npx github:Kuro0No/stingy init [--mode lite|strict|scrooge] [--hook]   ${C.dim}# Install /stingy skills & optional PreToolUse hook${C.reset}
+  npx github:Kuro0No/stingy init [--agent claude,codex,gemini,…|all] [--mode lite|strict|scrooge] [--hook]
+                                               ${C.dim}# Install Stingy for one or more agents & optional PreToolUse hook${C.reset}
   npx github:Kuro0No/stingy hook               ${C.dim}# Evaluate PreToolUse JSON event on stdin${C.reset}
   npx github:Kuro0No/stingy --version
 `);
