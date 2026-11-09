@@ -8,7 +8,13 @@ import { fileURLToPath } from 'node:url';
 
 const CLI = fileURLToPath(new URL('../bin/stingy.mjs', import.meta.url));
 const run = (args, cwd) => spawnSync(process.execPath, [CLI, ...args], { cwd, encoding: 'utf8' });
-const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'stingy-agents-'));
+const made = [];
+const tmp = () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'stingy-agents-'));
+  made.push(dir);
+  return dir;
+};
+test.after(() => made.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
 const read = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
 
 test('init --agent all writes every agent file and keeps user text in shared files', () => {

@@ -7,6 +7,9 @@
  *   stingy usage [agent]   -> Summarize agent tokens and estimated cost via ccusage
  *   stingy audit [dir]     -> Find high-token text files ("Token Black Holes")
  *   stingy init [--mode]   -> Install /stingy and /stingy-build project skills
+ *   stingy quiet -- <cmd>  -> Run a test/build command, print only failures and the summary
+ *   stingy hygiene         -> UserPromptSubmit hook: suggest a new chat once the context is large
+ *   stingy mcp             -> Read-only MCP server (find with context, outline)
  */
 
 import fs from 'node:fs';
@@ -18,6 +21,9 @@ import { findLocalLogs, readTranscript, ROAST_SOURCES } from '../src/transcripts
 import { readUsageReport, USAGE_SOURCES } from '../src/usage.mjs';
 import { evaluatePreToolHook, formatHookResponse, installPreToolHook } from '../src/hook.mjs';
 import { renderReceiptSvg, renderReceiptPng } from '../src/export-image.mjs';
+import { runQuiet } from '../src/quiet.mjs';
+import { DEFAULT_CONTEXT_WARN, hygieneMessage, installHygieneHook, readJsonObject } from '../src/hygiene.mjs';
+import { installClaudeMcp, serveMcp } from '../src/mcp.mjs';
 
 export { findLocalLogs };
 
@@ -441,6 +447,11 @@ function runInit() {
   const modeIndex = args.indexOf('--mode');
   const mode = (modeArg ? modeArg.slice('--mode='.length) : modeIndex !== -1 ? args[modeIndex + 1] || '' : 'strict').toLowerCase();
   if (!MODES.includes(mode)) throw new Error(`Unknown mode "${mode}". Use --mode ${MODES.join('|')}.`);
+  const agents = agentsFromArgs();
+  const [hook, hygiene, mcp] = ['--hook', '--hygiene', '--mcp'].map((flag) => args.includes(flag));
+  // Parse the JSON files these flags edit before writing anything: a broken file stops the whole install.
+  if (hook || hygiene) readJsonObject(path.join(process.cwd(), '.claude', 'settings.json'));
+  if (mcp) readJsonObject(path.join(process.cwd(), '.mcp.json'));
 
   // The chosen mode becomes the default mode written into the installed /stingy skill.
   const skillRoot = path.join(REPO_ROOT, 'skills');
@@ -455,7 +466,6 @@ function runInit() {
     skills.push({ name: featureSkillName, content: fs.readFileSync(featureFile) });
   }
 
-  const agents = agentsFromArgs();
   console.log(`\n${C.green}${C.bold}🪙 Installing Stingy for: ${agents.join(', ')}${C.reset}`);
   for (const agent of agents.filter((a) => SKILL_DIRS[a])) {
     for (const { name, content } of skills) {
@@ -478,10 +488,20 @@ function runInit() {
     console.log(`  ${C.dim}Feature-building mode:${C.reset} ${C.yellow}/${featureSkillName}${C.reset}`);
   }
 
-  if (args.includes('--hook')) {
+  if (hook) {
     const { hookScriptPath, settingsPath } = installPreToolHook(process.cwd());
     console.log(`  ${C.dim}Installed PreToolUse Hook:${C.reset} ${hookScriptPath}`);
     console.log(`  ${C.dim}Updated Hook Config:${C.reset} ${settingsPath}`);
+  }
+  if (hygiene) {
+    const { script, settingsPath } = installHygieneHook(process.cwd());
+    console.log(
+      `  ${C.dim}Installed UserPromptSubmit Hook:${C.reset} ${script} (suggests a new chat above ${DEFAULT_CONTEXT_WARN.toLocaleString('en-US')} tokens per call; STINGY_CONTEXT_WARN changes it)`
+    );
+    console.log(`  ${C.dim}Updated Hook Config:${C.reset} ${settingsPath}`);
+  }
+  if (mcp) {
+    console.log(`  ${C.dim}Added MCP server "stingy" (find, outline):${C.reset} ${installClaudeMcp(process.cwd())}`);
   }
 }
 
@@ -504,6 +524,17 @@ function runHook() {
   if (response) process.stdout.write(JSON.stringify(response) + '\n');
 }
 
+function runHygiene() {
+  let event = {};
+  try {
+    event = JSON.parse(fs.readFileSync(0, 'utf8') || '{}');
+  } catch {
+    return;
+  }
+  const message = hygieneMessage(event);
+  if (message) process.stdout.write(JSON.stringify(message) + '\n');
+}
+
 function printHelp(log = console.log) {
   log(`
 ${C.yellow}${C.bold}🪙 stingy${C.reset} — Roast tool waste and tally local agent usage.
@@ -512,21 +543,34 @@ ${C.bold}Usage:${C.reset}
   npx github:Kuro0No/stingy roast [path] [--source agent] [--svg out.svg] [--png out.png]
   npx github:Kuro0No/stingy usage [agent] [--from report.json] [--json]
   npx github:Kuro0No/stingy audit [dir]        ${C.dim}# Scan repo for Token Black Hole files${C.reset}
-  npx github:Kuro0No/stingy init [--agent claude,codex,gemini,…|all] [--mode lite|strict|scrooge] [--hook]
-                                               ${C.dim}# Install Stingy for one or more agents & optional PreToolUse hook${C.reset}
+  npx github:Kuro0No/stingy init [--agent claude,codex,gemini,…|all] [--mode lite|strict|scrooge] [--hook] [--hygiene] [--mcp]
+                                               ${C.dim}# Install Stingy for one or more agents, plus optional hooks and MCP server${C.reset}
+  npx github:Kuro0No/stingy quiet -- <command> ${C.dim}# Run tests/builds; print only failures and the summary${C.reset}
   npx github:Kuro0No/stingy hook               ${C.dim}# Evaluate PreToolUse JSON event on stdin${C.reset}
+  npx github:Kuro0No/stingy hygiene            ${C.dim}# UserPromptSubmit hook: suggest a new chat when the context is large${C.reset}
+  npx github:Kuro0No/stingy mcp                ${C.dim}# Read-only MCP server: find (search + context), outline${C.reset}
   npx github:Kuro0No/stingy --version
 `);
 }
 
-const commands = { roast: runRoast, usage: runUsage, audit: () => runAudit(args[1] || process.cwd()), init: runInit, hook: runHook };
+const version = () => JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8')).version;
+const commands = {
+  roast: runRoast,
+  usage: runUsage,
+  audit: () => runAudit(args[1] || process.cwd()),
+  init: runInit,
+  hook: runHook,
+  hygiene: runHygiene,
+  quiet: () => runQuiet(args.slice(1)),
+  mcp: () => serveMcp({ version: version() })
+};
 try {
   if (commands[command]) {
     commands[command]();
   } else if (['help', '--help', '-h'].includes(command)) {
     printHelp();
   } else if (['version', '--version', '-v'].includes(command)) {
-    console.log(JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8')).version);
+    console.log(version());
   } else {
     console.error(`Unknown command: ${args[0]}`);
     printHelp(console.error);

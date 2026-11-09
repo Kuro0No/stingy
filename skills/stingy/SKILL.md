@@ -14,6 +14,7 @@ Every tool call re-sends the whole conversation, and every tool output stays in 
 - **Small files once:** read a file under 250 lines whole in one call; never slice it over several calls.
 - **Quiet test runs:** run tests quietly (`--silent`, `| tail -30`): once to see the failures, fix everything they show, then once more to confirm. Never finish a task without a passing run.
 - **No re-reads:** never re-read an unchanged file already in context; re-read only the part a tool, formatter or the user changed.
+- **New task, new chat:** a long chat re-sends its whole history on every call. When the user starts an unrelated task in one, suggest in one line a new chat with a 3-line summary (or `/compact`).
 
 ## 2. The Coin Budget Contract (10.0 Coins / Turn)
 

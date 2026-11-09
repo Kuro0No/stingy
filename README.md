@@ -22,7 +22,7 @@ The [API cost calculator](https://kuro0no.github.io/stingy/#roast-generator) app
 
 <p align="center">
   <a href="#license"><img src="https://img.shields.io/badge/License-MIT-black.svg" alt="License: MIT" /></a>
-  <a href="./test/"><img src="https://img.shields.io/badge/tests-55%20passing-brightgreen.svg" alt="Tests: 55 passing" /></a>
+  <a href="./test/"><img src="https://img.shields.io/badge/tests-62%20passing-brightgreen.svg" alt="Tests: 62 passing" /></a>
   <a href="https://kuro0no.github.io/stingy/"><img src="https://img.shields.io/badge/demo-kuro0no.github.io%2Fstingy-orange.svg" alt="Live Demo" /></a>
 </p>
 
@@ -146,7 +146,7 @@ The [Gemini 3.8 Flash Medium traces](./benchmarks/fixtures/MANIFEST.json) record
 | Slash Command | Turn Budget | Best Used For | Key Rules Enforced |
 | :--- | :---: | :--- | :--- |
 | **`/stingy-build`** | **12.0 Coins** | **Feature building, UI scaffolding, multi-file refactors** | Targeted search, reads of up to 120 lines, one quiet verification command, and a `STINGY-BUILD` receipt. |
-| **`/stingy lite`** | **10.0 Coins** (guide) | Targeted context gathering | Fewest round trips: search and read in one call (`grep -n -C 25`), batch independent calls, read files under 250 lines once, run tests quietly (once to see failures, once to confirm). |
+| **`/stingy lite`** | **10.0 Coins** (guide) | Targeted context gathering | Fewest round trips: search and read in one call (`grep -n -C 25`), batch independent calls, read files under 250 lines once, run tests quietly (once to see failures, once to confirm), suggest a new chat for an unrelated task in a long chat. |
 | **`/stingy`** (or `/stingy strict`) | **10.0 Coins** | Daily coding, debugging, PR reviews | Lite rules plus the coin budget; no exploratory sweeps. No receipt footer: `/stingy-roast` measures the real numbers. |
 | **`/stingy scrooge`** | **10.0 Coins** | Focused bug hunts | Strict rules, no speculative calls, plans the whole patch before editing, at most 3 bullets of explanation. |
 | **`/stingy-roast`** | **Audit Mode** | **In-chat session token autopsy** | Runs the offline transcript analyzer and prints your ASCII Token Autopsy Receipt + Archetype diagnosis inside chat. |
@@ -159,9 +159,20 @@ The [Gemini 3.8 Flash Medium traces](./benchmarks/fixtures/MANIFEST.json) record
 | `npx github:Kuro0No/stingy roast --svg [out.svg] --png [out.png]` | Exports your Token Autopsy Receipt as a shareable vector `.svg` card and/or lossless `.png` image (zero dependencies). |
 | `npx github:Kuro0No/stingy roast --source <agent>` | Filters `roast` by agent (`claude`, `antigravity`, `codex`, `gemini`, `copilot`, `pi`, `openclaw`). |
 | `npx github:Kuro0No/stingy usage [source]` | Summarizes logged input/output/cache token bills across 18 agent sources via `ccusage`. |
-| `npx github:Kuro0No/stingy init [--agent <list>\|all] [--hook] [--mode lite\|strict\|scrooge]` | Installs Stingy for each agent in `--agent` (default `claude,antigravity`; comma list or `all`). Claude Code and Antigravity get the `stingy` and `stingy-build` skills under `.claude/skills/` and `.agents/skills/`. `codex` (Codex / ChatGPT agents and other `AGENTS.md` readers), `gemini` (`GEMINI.md`), `copilot` (`.github/copilot-instructions.md`) and `aider` (`CONVENTIONS.md`) get the rules in a `<!-- stingy:start -->` … `<!-- stingy:end -->` block, and the rest of the file is left alone. `cursor` (`.cursor/rules/stingy.mdc`), `windsurf` (`.windsurf/rules/stingy.md`) and `cline` (`.clinerules/stingy.md`) get their own rule file. Models such as DeepSeek work through these agents; `--mode` (default `strict`) becomes the installed skill's default mode. Pass `--hook` to also install the hard-enforcement `PreToolUse` hook into `.claude/settings.json` (existing settings are kept; an invalid settings file stops the install unchanged). |
+| `npx github:Kuro0No/stingy init [--agent <list>\|all] [--hook] [--hygiene] [--mcp] [--mode lite\|strict\|scrooge]` | Installs Stingy for each agent in `--agent` (default `claude,antigravity`; comma list or `all`). Claude Code and Antigravity get the `stingy` and `stingy-build` skills under `.claude/skills/` and `.agents/skills/`. `codex` (Codex / ChatGPT agents and other `AGENTS.md` readers), `gemini` (`GEMINI.md`), `copilot` (`.github/copilot-instructions.md`) and `aider` (`CONVENTIONS.md`) get the rules in a `<!-- stingy:start -->` … `<!-- stingy:end -->` block, and the rest of the file is left alone. `cursor` (`.cursor/rules/stingy.mdc`), `windsurf` (`.windsurf/rules/stingy.md`) and `cline` (`.clinerules/stingy.md`) get their own rule file. Models such as DeepSeek work through these agents; `--mode` (default `strict`) becomes the installed skill's default mode. Pass `--hook` to also install the hard-enforcement `PreToolUse` hook into `.claude/settings.json` (existing settings are kept; an invalid settings file stops the install unchanged). `--hygiene` adds the session-hygiene hook (below) to the same file, and `--mcp` adds the `stingy` MCP server to `.mcp.json` with the command for your OS; other servers are kept. |
 | `npx github:Kuro0No/stingy hook` | Evaluates a `PreToolUse` JSON event on `stdin` and blocks unbounded full-file reads (`> 250 lines`), `cat`/`Get-Content` dumps of such files, or lockfiles before they enter context. Allowed calls print nothing, so your normal permission prompts still apply. |
+| `npx github:Kuro0No/stingy quiet -- <command>` | Runs a test or build command and prints only the failure lines with 2 lines of context, the last 8 lines and the exit code (60 lines at most). A passing run prints its last 8 lines. Keeps the command's exit code. |
+| `npx github:Kuro0No/stingy hygiene` | `UserPromptSubmit` hook, installed by `init --hygiene`. Once a call re-sends more than 150,000 tokens, it tells you to start a new chat for the next task. |
+| `npx github:Kuro0No/stingy mcp` | Read-only MCP server over stdio: `find` (matches with surrounding lines) and `outline` (functions and classes with line numbers). Paths stay inside the project folder. |
 | `npx github:Kuro0No/stingy audit [dir]` | Scans a repository for oversized "Token Black Hole" text files (`> 12 KB`); respects `.gitignore` and skips binary files. |
+
+### 3. Calls, Test Logs and Long Chats
+
+Every model call re-sends the system prompt, the tool definitions and the whole chat, and every tool output stays in the chat for all later calls. So the number of calls, the size of command output and the length of the chat can cost more than any single read. Three opt-in tools go after them:
+
+* **`stingy quiet -- npm test`** keeps only what the agent needs from a test or build log. A failing run with 300 lines of output comes back as about 10 lines.
+* **`stingy init --hygiene`** installs a `UserPromptSubmit` hook. Once a call re-sends more than 150,000 tokens (set `STINGY_CONTEXT_WARN` to change it), it tells you to start a new chat with a 3-line summary for the next task, or to run `/compact`. The tip is a hook message to you, not part of the prompt. It repeats every extra 100,000 tokens and starts over after `/compact`.
+* **`stingy init --mcp`** adds a read-only MCP server. `find` returns each match with the lines around it, so a search and a read take one call; `outline` lists a file's functions and classes with line numbers without reading the file. MCP tool definitions are re-sent on every call too (about 200 tokens for these two), so add the server only if your agent's search can't show context lines or you often work in large files. For other MCP clients, run `npx -y github:Kuro0No/stingy mcp` in the project folder (`cmd /c npx -y github:Kuro0No/stingy mcp` on Windows).
 
 ---
 

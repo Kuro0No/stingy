@@ -11,7 +11,13 @@ import { renderReceiptPng } from '../src/export-image.mjs';
 
 const REPO_ROOT = fileURLToPath(new URL('../', import.meta.url));
 const CLI = path.join(REPO_ROOT, 'bin', 'stingy.mjs');
-const tmp = (name) => fs.mkdtempSync(path.join(os.tmpdir(), `stingy-${name}-`));
+const made = [];
+const tmp = (name) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `stingy-${name}-`));
+  made.push(dir);
+  return dir;
+};
+test.after(() => made.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
 const run = (args, opts = {}) => spawnSync(process.execPath, [CLI, ...args], { encoding: 'utf8', ...opts });
 function bigFile(dir, lines = 400) {
   const file = path.join(dir, 'big-service.ts');
